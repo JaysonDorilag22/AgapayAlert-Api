@@ -95,6 +95,16 @@ const userSchema = new mongoose.Schema(
         default: Date.now,
       },
     },
+    passwordReset: {
+    token: {
+      type: String,
+      default: '',
+    },
+    expiresAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
   },
   {
     timestamps: true,

@@ -1,5 +1,6 @@
 const transporter = require('../config/emailConfig');
 const verificationEmailTemplate = require('../views/verificationEmailTemplate');
+const passwordResetEmailTemplate = require('../views/passwordResetEmailTemplate');
 
 const sendEmail = async (options) => {
   const mailOptions = {
@@ -19,7 +20,15 @@ const sendVerificationEmail = async (email, verificationCode) => {
   await sendEmail({ email, subject, template });
 };
 
+const sendPasswordResetEmail = async (email, resetCode) => {
+  const subject = 'Password Reset';
+  const template = passwordResetEmailTemplate(resetCode);
+
+  await sendEmail({ email, subject, template });
+};
+
 module.exports = {
   sendEmail,
   sendVerificationEmail,
+  sendPasswordResetEmail,
 };

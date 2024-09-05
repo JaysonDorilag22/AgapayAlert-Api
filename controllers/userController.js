@@ -7,9 +7,12 @@ const upload = require("../config/multer");
 const { createToken, setTokenCookie } = require("../helpers/tokenHelper");
 const asyncHandler = require("../helpers/asyncHandler");
 const STATUS_CODES = require("../constants/statusCodes");
-const { sendVerificationEmail } = require("../helpers/emailHelper");
+const {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} = require("../helpers/emailHelper");
 
-// Signup function
+// Signup
 exports.signup = asyncHandler(async (req, res) => {
   upload(req, res, async (err) => {
     if (err) {
@@ -78,6 +81,7 @@ exports.signup = asyncHandler(async (req, res) => {
   });
 });
 
+//login
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -112,6 +116,7 @@ exports.logout = asyncHandler(async (req, res) => {
   res.status(STATUS_CODES.OK).json({ message: "Logged out successfully" });
 });
 
+//verify email
 exports.verifyEmail = asyncHandler(async (req, res) => {
   const { email, code } = req.body;
 
@@ -168,11 +173,9 @@ exports.resendVerificationCode = asyncHandler(async (req, res) => {
   // cd 5 minutes
   const cooldownPeriod = 5 * 60 * 1000; // 5 minutes in milliseconds
   if (Date.now() - user.verification.lastRequestedAt < cooldownPeriod) {
-    return res
-      .status(STATUS_CODES.TOO_MANY_REQUESTS)
-      .json({
-        message: "Please wait before requesting a new verification code",
-      });
+    return res.status(STATUS_CODES.TOO_MANY_REQUESTS).json({
+      message: "Please wait before requesting a new verification code",
+    });
   }
 
   const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -188,4 +191,53 @@ exports.resendVerificationCode = asyncHandler(async (req, res) => {
   res
     .status(STATUS_CODES.OK)
     .json({ message: "Verification code resent. Please check your email." });
+});
+
+exports.requestPasswordReset = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res
+      .status(STATUS_CODES.NOT_FOUND)
+      .json({ message: "User not found" });
+  }
+
+  const resetCode = Math.floor(1000 + Math.random() * 9000).toString();
+  const resetExpires = Date.now() + 3600000; // 1 hour
+
+  user.passwordReset.token = resetCode;
+  user.passwordReset.expiresAt = resetExpires;
+  await user.save();
+
+  await sendPasswordResetEmail(user.email, resetCode);
+
+  res
+    .status(STATUS_CODES.OK)
+    .json({ message: "Password reset code sent. Please check your email." });
+});
+
+// Reset password function
+exports.resetPassword = asyncHandler(async (req, res) => {
+  const { email, code, password } = req.body;
+
+  const user = await User.findOne({
+    email,
+    "passwordReset.token": code,
+    "passwordReset.expiresAt": { $gt: Date.now() },
+  });
+  if (!user) {
+    return res
+      .status(STATUS_CODES.BAD_REQUEST)
+      .json({ message: "Invalid or expired password reset code" });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  user.password = hashedPassword;
+  user.passwordReset.token = undefined;
+  user.passwordReset.expiresAt = undefined;
+  await user.save();
+
+  res.status(STATUS_CODES.OK).json({ message: "Password reset successfully" });
 });

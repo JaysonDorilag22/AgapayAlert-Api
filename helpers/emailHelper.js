@@ -1,23 +1,25 @@
-const nodemailer = require('nodemailer');
+const transporter = require('../config/emailConfig');
+const verificationEmailTemplate = require('../views/verificationEmailTemplate');
 
 const sendEmail = async (options) => {
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.mailtrap.io',
-    port: 2525,
-    auth: {
-      user: process.env.MAILTRAP_USERNAME,
-      pass: process.env.MAILTRAP_PASSWORD,
-    },
-  });
-
   const mailOptions = {
     from: 'Your App <no-reply@yourapp.com>',
     to: options.email,
     subject: options.subject,
-    text: options.message,
+    html: options.template,
   };
 
   await transporter.sendMail(mailOptions);
 };
 
-module.exports = sendEmail;
+const sendVerificationEmail = async (email, verificationCode) => {
+  const subject = 'Email Verification';
+  const template = verificationEmailTemplate(verificationCode);
+
+  await sendEmail({ email, subject, template });
+};
+
+module.exports = {
+  sendEmail,
+  sendVerificationEmail,
+};

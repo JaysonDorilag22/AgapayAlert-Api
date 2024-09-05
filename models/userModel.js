@@ -90,6 +90,10 @@ const userSchema = new mongoose.Schema(
         default: Date.now,
         index: { expires: "1h" }, // Verification code expires in 1 hour
       },
+      lastRequestedAt: {
+        type: Date,
+        default: Date.now,
+      },
     },
   },
   {

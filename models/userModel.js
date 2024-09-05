@@ -79,22 +79,6 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  verification: {
-    code: {
-      type: String,
-      default: '',
-    },
-    method: {
-      type: String,
-      enum: ['email', 'sms'],
-      default: 'email',
-    },
-    expiresAt: {
-      type: Date,
-      default: Date.now,
-      index: { expires: '1h' }, // Verification code expires in 1 hour
-    },
-  },
 }, {
   timestamps: true,
 });

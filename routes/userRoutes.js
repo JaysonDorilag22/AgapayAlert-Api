@@ -1,17 +1,58 @@
 const express = require('express');
 const router = express.Router();
-const { PATHS } = require('../constants/path');
+const { PATHS, METHODS } = require('../constants/path');
 const userController = require('../controllers/userController');
 
+const userRoutes = [
+  {
+    method: METHODS.POST,
+    path: PATHS.USER.CREATE.path,
+    handler: userController.signup,
+  },
+  {
+    method: METHODS.POST,
+    path: PATHS.USER.LOGIN.path,
+    handler: userController.login,
+  },
+  {
+    method: METHODS.POST,
+    path: PATHS.USER.LOGOUT.path,
+    handler: userController.logout,
+  },
+  {
+    method: METHODS.POST,
+    path: PATHS.USER.VERIFY.path,
+    handler: userController.verifyEmail,
+  },
+  {
+    method: METHODS.POST,
+    path: PATHS.USER.RESEND.path,
+    handler: userController.resendVerificationCode,
+  },
+  {
+    method: METHODS.POST,
+    path: PATHS.USER.FORGOT_PASSWORD.path,
+    handler: userController.requestPasswordReset,
+  },
+  {
+    method: METHODS.POST,
+    path: PATHS.USER.RESET_PASSWORD.path,
+    handler: userController.resetPassword,
+  },
+  {
+    method: METHODS.GET,
+    path: PATHS.USER.READ_ALL_PAGINATION.path.split('?')[0],
+    handler: userController.displayUsers,
+  },
+  {
+    method: METHODS.GET,
+    path: PATHS.USER.READ_ONE.path,
+    handler: userController.getUserProfile,
+  },
+];
 
-router.post(PATHS.USER.CREATE.path, userController.signup);
-router.post(PATHS.USER.LOGIN.path, userController.login);
-router.post(PATHS.USER.LOGOUT.path, userController.logout);
-router.post(PATHS.USER.VERIFY.path, userController.verifyEmail);
-router.post(PATHS.USER.RESEND.path, userController.resendVerificationCode);
-router.post(PATHS.USER.FORGOT_PASSWORD.path, userController.requestPasswordReset);
-router.post(PATHS.USER.RESET_PASSWORD.path, userController.resetPassword);
-
-
+userRoutes.forEach(route => {
+  router[route.method.toLowerCase()](route.path, route.handler);
+});
 
 module.exports = router;

@@ -16,7 +16,7 @@ const METHODS = {
       RESEND: { path: '/resend-verification', method: METHODS.POST },
       FORGOT_PASSWORD: { path: '/request-password-reset', method: METHODS.POST },
       RESET_PASSWORD: { path: '/reset-password', method: METHODS.POST },
-      READ_ALL: { path: '/', method: METHODS.GET },
+      READ_ALL_PAGINATION: { path: '/?page=1&pageSize=10', method: METHODS.GET },
       READ_ONE: { path: '/:id', method: METHODS.GET },
       UPDATE: { path: '/:id', method: METHODS.PUT },
       DELETE: { path: '/:id', method: METHODS.DELETE },

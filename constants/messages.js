@@ -13,4 +13,7 @@ module.exports = {
     PASSWORD_RESET_SUCCESS: 'Password reset successfully',
     TOO_MANY_REQUESTS: 'Please wait before requesting a new verification code',
     INVALID_INPUT: 'Invalid input data',
+    INVALID_PAGINATION_PARAMETERS: 'Invalid input data',
+    FETCHING_ERROR: 'An error occurred while fetching',
+
   };

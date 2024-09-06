@@ -240,3 +240,53 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   // Send a success response
   res.status(STATUS_CODES.OK).json({ message: MESSAGES.PASSWORD_RESET_SUCCESS });
 });
+
+// Display users function
+exports.displayUsers = asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const pageSize = parseInt(req.query.pageSize, 10) || 10;
+
+    if (isNaN(page) || isNaN(pageSize) || page <= 0 || pageSize <= 0) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.INVALID_PAGINATION_PARAMETERS});
+    }
+
+    const skip = (page - 1) * pageSize;
+    const totalUsers = await User.countDocuments();
+    const users = await User.find({}, 'firstname lastname email') 
+      .skip(skip)
+      .limit(pageSize)
+      .lean();
+
+    res.status(STATUS_CODES.OK).json({
+      page,
+      pageSize,
+      totalUsers,
+      totalPages: Math.ceil(totalUsers / pageSize),
+      users,
+    });
+  } catch (error) {
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.FETCHING_ERROR });
+  }
+});
+
+
+exports.getUserProfile = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!userId) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'User ID is required' });
+    }
+
+    const user = await User.findById(userId, 'firstname lastname email profilePicture').lean();
+
+    if (!user) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({ message: 'User not found' });
+    }
+
+    res.status(STATUS_CODES.OK).json({ user });
+  } catch (error) {
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.FETCHING_ERROR });
+  }
+});

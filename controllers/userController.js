@@ -276,7 +276,7 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
     const userId = req.params.id;
 
     if (!userId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'User ID is required' });
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.USER_ID_REQUIRED });
     }
 
     const user = await User.findById(userId, 'firstname lastname email profilePicture').lean();
@@ -288,5 +288,36 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
     res.status(STATUS_CODES.OK).json({ user });
   } catch (error) {
     res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.FETCHING_ERROR });
+  }
+});
+
+exports.editUserInfo = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { firstname, lastname, email, profilePicture, address, phoneNo, preferred_notifications } = req.body;
+
+    if (!userId) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.USER_ID_REQUIRED });
+    }
+
+    // Validate preferred_notifications
+    const validNotifications = ['sms', 'push', 'email'];
+    if (preferred_notifications && !preferred_notifications.every(notification => validNotifications.includes(notification))) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'Invalid preferred notifications' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { firstname, lastname, email, profilePicture, address, phoneNo, preferred_notifications },
+      { new: true, runValidators: true, context: 'query' }
+    ).lean();
+
+    if (!updatedUser) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({ message: MESSAGES.USER_NOT_FOUND });
+    }
+
+    res.status(STATUS_CODES.OK).json({ user: updatedUser });
+  } catch (error) {
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.UPDATING_ERROR });
   }
 });

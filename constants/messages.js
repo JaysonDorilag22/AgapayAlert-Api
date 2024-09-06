@@ -15,5 +15,6 @@ module.exports = {
     INVALID_INPUT: 'Invalid input data',
     INVALID_PAGINATION_PARAMETERS: 'Invalid input data',
     FETCHING_ERROR: 'An error occurred while fetching',
+    USER_ID_REQUIRED: 'User ID is required'
 
   };

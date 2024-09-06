@@ -49,6 +49,11 @@ const userRoutes = [
     path: PATHS.USER.READ_ONE.path,
     handler: userController.getUserProfile,
   },
+  {
+    method: METHODS.PUT,
+    path: PATHS.USER.UPDATE.path,
+    handler: userController.editUserInfo,
+  },
 ];
 
 userRoutes.forEach(route => {

@@ -71,10 +71,10 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
-    preffered_notification: {
-      type: String,
+    preferred_notifications: {
+      type: [String],
       enum: ["email", "sms", "push"],
-      default: "push",
+      default: ["push"],
     },
     verified: {
       type: Boolean,
@@ -96,15 +96,15 @@ const userSchema = new mongoose.Schema(
       },
     },
     passwordReset: {
-    token: {
-      type: String,
-      default: '',
+      token: {
+        type: String,
+        default: '',
+      },
+      expiresAt: {
+        type: Date,
+        default: Date.now,
+      },
     },
-    expiresAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
   },
   {
     timestamps: true,

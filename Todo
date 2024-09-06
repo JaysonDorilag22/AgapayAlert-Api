@@ -15,15 +15,13 @@ Check Existing User:
 -User Creation: Creates a new user with the provided details and saves it to the database.
 -Send Verification Email: Sends a verification email to the user.
 -Response: Returns a success message indicating the verification code has been sent
+-Edit user info
+-Delete user account
 
 Todo:
-two factor auth
-google sign in
-sms verification (for another verification method)
-Display users (pagination)
-Edit user info
-Delete user account
-Display user info 
+-two factor auth
+-google sign in
+-sms verification (for another verification method)
 
 
 Feedback:

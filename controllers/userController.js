@@ -291,6 +291,7 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
+// Edit user information
 exports.editUserInfo = asyncHandler(async (req, res) => {
   try {
     const userId = req.params.id;
@@ -319,5 +320,27 @@ exports.editUserInfo = asyncHandler(async (req, res) => {
     res.status(STATUS_CODES.OK).json({ user: updatedUser });
   } catch (error) {
     res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.UPDATING_ERROR });
+  }
+});
+
+
+// Delete user account
+exports.deleteUserAccount = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!userId) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.USER_ID_REQUIRED  });
+    }
+
+    const deletedUser = await User.findByIdAndDelete(userId).lean();
+
+    if (!deletedUser) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({ message: MESSAGES.USER_NOT_FOUND });
+    }
+
+    res.status(STATUS_CODES.OK).json({ message: 'User account deleted successfully' });
+  } catch (error) {
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.DELETING_ERROR });
   }
 });

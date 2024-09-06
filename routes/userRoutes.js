@@ -54,6 +54,11 @@ const userRoutes = [
     path: PATHS.USER.UPDATE.path,
     handler: userController.editUserInfo,
   },
+  {
+    method: METHODS.DELETE,
+    path: PATHS.USER.DELETE.path,
+    handler: userController.deleteUserAccount,
+  },
 ];
 
 userRoutes.forEach(route => {

@@ -113,7 +113,20 @@ const messageSchema = Joi.object({
   }).optional(),
 });
 
+
+//reset password
+const resetPasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+  code: Joi.string().length(4).required(),
+  password: Joi.string().min(8).required(),
+});
+
+const validateResetPasswordInput = (data) => {
+  return resetPasswordSchema.validate(data);
+};
+
 module.exports = {
+  validateResetPasswordInput,
   userSchema,
   feedbackSchema,
   reportSchema,

@@ -1,0 +1,37 @@
+User :
+Done:
+Signup Function
+-File Upload Handling: Uses multer to handle file uploads.
+--Request Body Validation: Validates the request body against the userSchema.
+Check Existing User:
+    -If the user exists and is not verified:
+        -Checks if the verification code has expired.
+        -If expired, generates a new verification code and sends a verification email.
+        -If not expired, returns a message indicating the verification code has already been sent.
+    -If the user exists and is verified, returns a message indicating the user already exists.
+-Avatar Upload: Uploads the avatar to Cloudinary if provided.
+-Password Hashing: Hashes the user's password using bcrypt.
+-Verification Code Generation: Generates a 4-digit verification code and sets its expiration time.
+-User Creation: Creates a new user with the provided details and saves it to the database.
+-Send Verification Email: Sends a verification email to the user.
+-Response: Returns a success message indicating the verification code has been sent
+
+Todo:
+two factor auth
+google sign in
+sms verification (for another verification method)
+Display users (pagination)
+Edit user info
+Delete user account
+Display user info 
+
+
+Feedback:
+Report:
+notification:
+Chat & Message:
+Comment:
+alpr:
+
+
+

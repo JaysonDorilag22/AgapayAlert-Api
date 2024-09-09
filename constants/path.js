@@ -7,6 +7,17 @@ const METHODS = {
   
   const PATHS = {
     // User paths
+    AUTH: {
+      BASE: '/api/auth',
+      CREATE: { path: '/', method: METHODS.POST },
+      LOGIN: { path: '/login', method: METHODS.POST },
+      LOGOUT: { path: '/logout', method: METHODS.POST },
+      VERIFY: { path: '/verify', method: METHODS.POST },
+      RESEND: { path: '/resend-verification', method: METHODS.POST },
+      FORGOT_PASSWORD: { path: '/request-password-reset', method: METHODS.POST },
+      RESET_PASSWORD: { path: '/reset-password', method: METHODS.POST },
+    },
+    // User paths
     USER: {
       BASE: '/api/users',
       CREATE: { path: '/', method: METHODS.POST },

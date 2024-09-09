@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
+const authRoutes = require('./routes/authRoutes')
 const { PATHS } = require('./constants/path');
 
 dotenv.config();
@@ -19,6 +20,8 @@ app.get('/', (req, res) => {
 });
 
 app.use(PATHS.USER.BASE, userRoutes);
+app.use(PATHS.AUTH.BASE, authRoutes);
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

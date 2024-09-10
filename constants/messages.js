@@ -18,5 +18,4 @@ module.exports = {
     USER_ID_REQUIRED: 'User ID is required',
     USER_ID_REQUIRED: 'User ID is required',
     DELETING_ERROR: 'Error deleting account'
-
   };

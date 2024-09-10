@@ -1,10 +1,10 @@
-
 const User = require('../models/userModel');
-const asyncHandler = require('../helpers/asyncHandler');
+const asyncHandler = require('../utils/asyncHandler');
 const STATUS_CODES = require('../constants/statusCodes');
 const MESSAGES = require('../constants/messages'); 
-const cloudinary = require('../config/cloudinaryConfig');
-const upload = require('../config/multer');
+const cloudinary = require('../utils/cloudinary');
+const upload = require('../utils/multer');
+const { handleError } = require('../utils/errorHandler');
 
 // Display users function
 exports.displayUsers = asyncHandler(async (req, res) => {
@@ -13,7 +13,7 @@ exports.displayUsers = asyncHandler(async (req, res) => {
     const pageSize = parseInt(req.query.pageSize, 10) || 10;
 
     if (isNaN(page) || isNaN(pageSize) || page <= 0 || pageSize <= 0) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.INVALID_PAGINATION_PARAMETERS});
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.INVALID_PAGINATION_PARAMETERS });
     }
 
     const skip = (page - 1) * pageSize;
@@ -31,10 +31,9 @@ exports.displayUsers = asyncHandler(async (req, res) => {
       users,
     });
   } catch (error) {
-    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.FETCHING_ERROR });
+    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.FETCHING_ERROR);
   }
 });
-
 
 exports.getUserProfile = asyncHandler(async (req, res) => {
   try {
@@ -52,7 +51,7 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
 
     res.status(STATUS_CODES.OK).json({ user });
   } catch (error) {
-    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.FETCHING_ERROR });
+    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.FETCHING_ERROR);
   }
 });
 
@@ -116,12 +115,10 @@ exports.editUserInfo = asyncHandler(async (req, res) => {
 
       res.status(STATUS_CODES.OK).json({ user });
     } catch (error) {
-      console.error(error);
-      res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.UPDATING_ERROR });
+      handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.UPDATING_ERROR);
     }
   });
 });
-
 
 // Delete user account
 exports.deleteUserAccount = asyncHandler(async (req, res) => {
@@ -129,7 +126,7 @@ exports.deleteUserAccount = asyncHandler(async (req, res) => {
     const userId = req.params.id;
 
     if (!userId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.USER_ID_REQUIRED  });
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.USER_ID_REQUIRED });
     }
 
     const deletedUser = await User.findByIdAndDelete(userId).lean();
@@ -140,6 +137,6 @@ exports.deleteUserAccount = asyncHandler(async (req, res) => {
 
     res.status(STATUS_CODES.OK).json({ message: 'User account deleted successfully' });
   } catch (error) {
-    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: MESSAGES.DELETING_ERROR });
+    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.DELETING_ERROR);
   }
 });

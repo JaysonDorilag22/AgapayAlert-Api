@@ -1,7 +1,6 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel");
 const { userSchema } = require("../helpers/validationHelper");
-const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 const { createToken, setTokenCookie } = require("../utils/token");
 const asyncHandler = require("../utils/asyncHandler");
@@ -10,7 +9,9 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require("../utils/send
 const { validateResetPasswordInput } = require("../helpers/validationHelper");
 const { findUserByResetCode, hashPassword, resetUserPassword } = require("../helpers/userHelper");
 const MESSAGES = require("../constants/messages");
-const { handleError } = require('../utils/errorHandler');
+const { handleError } = require('../utils/errorHandler')
+const { uploadAvatar } = require('../utils/avatarUpload');
+const { generateVerificationCode, handleVerification } = require('../utils/verification');
 
 // Signup function
 exports.signup = asyncHandler(async (req, res) => {
@@ -41,20 +42,15 @@ exports.signup = asyncHandler(async (req, res) => {
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         if (!existingUser.verified) {
-          // Check if the verification code has expired
           if (existingUser.verification.expiresAt < Date.now()) {
-            // Generate a new verification code
-            const verificationCode = Math.floor(
-              1000 + Math.random() * 9000
-            ).toString();
-            const verificationExpires = Date.now() + 3600000; // 1 hour
-
+            // Generate a new verification code and update the user
+            const { verificationCode, verificationExpires } = generateVerificationCode();
             existingUser.verification.code = verificationCode;
             existingUser.verification.expiresAt = verificationExpires;
             existingUser.verification.lastRequestedAt = Date.now();
             await existingUser.save();
 
-            // Send verification email
+            // Send the new verification email
             await sendVerificationEmail(existingUser.email, verificationCode);
 
             return res.status(STATUS_CODES.OK).json({
@@ -72,22 +68,11 @@ exports.signup = asyncHandler(async (req, res) => {
         }
       }
 
-      let avatarData = {};
-      if (req.file) {
-        const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
-          folder: "avatars",
-        });
-        avatarData = {
-          public_id: uploadResponse.public_id,
-          url: uploadResponse.secure_url,
-        };
-      }
-
+      const avatarData = await uploadAvatar(req.file);
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Generate 4-digit verification code
-      const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
-      const verificationExpires = Date.now() + 3600000; // 1 hour
+      // Generate verification code and expiration
+      const { verificationCode, verificationExpires } = generateVerificationCode();
 
       const user = new User({
         firstname,
@@ -104,7 +89,6 @@ exports.signup = asyncHandler(async (req, res) => {
       });
       await user.save();
 
-      // Send verification email
       await sendVerificationEmail(user.email, verificationCode);
 
       res.status(STATUS_CODES.CREATED).json({

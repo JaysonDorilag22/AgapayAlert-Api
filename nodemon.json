@@ -1,6 +1,0 @@
-{
-    "watch": ["server.js", "config", "routes", "controllers", "helpers", "utils", "constants"],
-    "ext": "js,json",
-    "ignore": ["node_modules"]
-  }
-  

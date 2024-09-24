@@ -22,7 +22,7 @@ exports.signup = asyncHandler(async (req, res) => {
         .json({ message: err.message });
     }
 
-    const { firstname, lastname, email, password, address } = req.body;
+    const { firstname, lastname, email, password, address, phoneNo } = req.body;
 
     // Validate the request body against the schema
     const { error } = userSchema.validate({
@@ -31,6 +31,7 @@ exports.signup = asyncHandler(async (req, res) => {
       email,
       password,
       address,
+      phoneNo,
     });
     if (error) {
       return res
@@ -81,6 +82,7 @@ exports.signup = asyncHandler(async (req, res) => {
         password: hashedPassword,
         avatar: avatarData,
         address,
+        phoneNo,
         verification: {
           code: verificationCode,
           expiresAt: verificationExpires,

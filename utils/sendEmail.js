@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 
 const sendEmail = async (options) => {
   const mailOptions = {
-    from: 'Your App <no-reply@yourapp.com>',
+    from: 'AgapayAlert',
     to: options.email,
     subject: options.subject,
     html: options.template,

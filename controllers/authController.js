@@ -1,306 +1,141 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel");
-const { userSchema } = require("../helpers/validationHelper");
-const upload = require("../utils/multer");
-const { createToken, setTokenCookie } = require("../utils/token");
-const asyncHandler = require("../utils/asyncHandler");
 const STATUS_CODES = require("../constants/statusCodes");
-const { sendVerificationEmail, sendPasswordResetEmail } = require("../utils/sendEmail");
-const { validateResetPasswordInput } = require("../helpers/validationHelper");
-const { findUserByResetCode, hashPassword, resetUserPassword } = require("../helpers/userHelper");
 const MESSAGES = require("../constants/messages");
-const { handleError } = require('../utils/errorHandler')
-const { uploadAvatar } = require('../utils/avatarUpload');
-const { generateVerificationCode, handleVerification } = require('../utils/verification');
+const upload = require("../utils/multer");
+const asyncHandler = require("../utils/asyncHandler");
+const { successHandler } = require("../utils/successHandler");
+const { sendPasswordResetEmail } = require("../utils/sendEmail");
+const { createToken, setTokenCookie } = require("../utils/token");
+const { handleVerification, generateVerificationCode } = require("../utils/verification");
+const { validateResetPasswordInput } = require("../helpers/validationHelper");
+const { sendVerificationEmail } = require("../utils/sendEmail");
+const { findUserByResetCode, hashPassword, resetUserPassword, validateRequestBody, handleExistingUser, createUser } = require("../helpers/userHelper");
 
 // Signup function
 exports.signup = asyncHandler(async (req, res) => {
   upload(req, res, async (err) => {
-    if (err) {
-      return res
-        .status(STATUS_CODES.BAD_REQUEST)
-        .json({ message: err.message });
-    }
+    if (err) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: err.message };
 
     const { firstname, lastname, email, password, address, phoneNo } = req.body;
+    const validationError = validateRequestBody({ firstname, lastname, email, password, address, phoneNo });
 
-    // Validate the request body against the schema
-    const { error } = userSchema.validate({
-      firstname,
-      lastname,
-      email,
-      password,
-      address,
-      phoneNo,
-    });
-    if (error) {
-      return res
-        .status(STATUS_CODES.BAD_REQUEST)
-        .json({ message: error.details[0].message });
+    if (validationError) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: validationError.details[0].message };
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return handleExistingUser(res, existingUser);
     }
 
-    try {
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        if (!existingUser.verified) {
-          if (existingUser.verification.expiresAt < Date.now()) {
-            // Generate a new verification code and update the user
-            const { verificationCode, verificationExpires } = generateVerificationCode();
-            existingUser.verification.code = verificationCode;
-            existingUser.verification.expiresAt = verificationExpires;
-            existingUser.verification.lastRequestedAt = Date.now();
-            await existingUser.save();
+    await createUser(req, res, { firstname, lastname, email, password, address, phoneNo });
 
-            // Send the new verification email
-            await sendVerificationEmail(existingUser.email, verificationCode);
-
-            return res.status(STATUS_CODES.OK).json({
-              message: MESSAGES.VERIFICATION_CODE_SENT,
-            });
-          } else {
-            return res.status(STATUS_CODES.BAD_REQUEST).json({
-              message: MESSAGES.VERIFICATION_CODE_SENT,
-            });
-          }
-        } else {
-          return res
-            .status(STATUS_CODES.CONFLICT)
-            .json({ message: MESSAGES.USER_ALREADY_EXISTS });
-        }
-      }
-
-      const avatarData = await uploadAvatar(req.file);
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Generate verification code and expiration
-      const { verificationCode, verificationExpires } = generateVerificationCode();
-
-      const user = new User({
-        firstname,
-        lastname,
-        email,
-        password: hashedPassword,
-        avatar: avatarData,
-        address,
-        phoneNo,
-        verification: {
-          code: verificationCode,
-          expiresAt: verificationExpires,
-          lastRequestedAt: Date.now(),
-        },
-      });
-      await user.save();
-
-      await sendVerificationEmail(user.email, verificationCode);
-
-      res.status(STATUS_CODES.CREATED).json({
-        message: MESSAGES.VERIFICATION_CODE_SENT,
-      });
-    } catch (error) {
-      handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.SIGNUP_ERROR);
-    }
+    successHandler(res, STATUS_CODES.CREATED, MESSAGES.USER_CREATED_SUCCESSFULLY);
   });
 });
 
 // Login function
 exports.login = asyncHandler(async (req, res) => {
-  try {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res
-        .status(STATUS_CODES.NOT_FOUND)
-        .json({ message: MESSAGES.USER_NOT_FOUND });
-    }
+  const user = await User.findOne({ email });
+  if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res
-        .status(STATUS_CODES.UNAUTHORIZED)
-        .json({ message: MESSAGES.INVALID_CREDENTIALS });
-    }
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) throw { statusCode: STATUS_CODES.UNAUTHORIZED, message: MESSAGES.INVALID_CREDENTIALS };
 
-    if (!user.verified) {
-      return res
-        .status(STATUS_CODES.UNAUTHORIZED)
-        .json({ message: MESSAGES.EMAIL_NOT_VERIFIED });
-    }
+  if (!user.verified) throw { statusCode: STATUS_CODES.UNAUTHORIZED, message: MESSAGES.EMAIL_NOT_VERIFIED };
 
-    const token = createToken(user);
-    setTokenCookie(res, token);
-    res.status(STATUS_CODES.OK).json({ user, token });
-  } catch (error) {
-    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.LOGIN_ERROR);
-  }
+  const token = createToken(user);
+  setTokenCookie(res, token);
+  successHandler(res, STATUS_CODES.OK, MESSAGES.LOGIN_SUCCESSFUL, { user, token });
 });
 
 // Logout function
 exports.logout = asyncHandler(async (req, res) => {
-  try {
-    // Clear the token cookie
-    res.clearCookie("token");
-
-    res
-      .status(STATUS_CODES.OK)
-      .json({ message: MESSAGES.LOGGED_OUT_SUCCESSFULLY });
-  } catch (error) {
-    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.LOGOUT_ERROR);
-  }
+  res.clearCookie("token");
+  successHandler(res, STATUS_CODES.OK, MESSAGES.LOGGED_OUT_SUCCESSFULLY);
 });
 
 // Verify email function
 exports.verifyEmail = asyncHandler(async (req, res) => {
-  try {
-    const { email, code } = req.body;
+  const { email, code } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res
-        .status(STATUS_CODES.NOT_FOUND)
-        .json({ message: MESSAGES.USER_NOT_FOUND });
-    }
+  const user = await User.findOne({ email });
+  if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
 
-    if (user.verified) {
-      return res
-        .status(STATUS_CODES.BAD_REQUEST)
-        .json({ message: MESSAGES.EMAIL_ALREADY_VERIFIED });
-    }
+  if (user.verified) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.EMAIL_ALREADY_VERIFIED };
 
-    if (user.verification.expiresAt < Date.now()) {
-      return res
-        .status(STATUS_CODES.BAD_REQUEST)
-        .json({ message: MESSAGES.VERIFICATION_CODE_EXPIRED });
-    }
+  if (user.verification.expiresAt < Date.now()) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.VERIFICATION_CODE_EXPIRED };
 
-    if (user.verification.code !== code) {
-      return res
-        .status(STATUS_CODES.BAD_REQUEST)
-        .json({ message: MESSAGES.INCORRECT_VERIFICATION_CODE });
-    }
+  if (user.verification.code !== code) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.INCORRECT_VERIFICATION_CODE };
 
-    user.verified = true;
-    user.verification.code = undefined;
-    user.verification.expiresAt = undefined;
-    await user.save();
+  user.verified = true;
+  user.verification.code = undefined;
+  user.verification.expiresAt = undefined;
+  await user.save();
 
-    res
-      .status(STATUS_CODES.OK)
-      .json({ message: MESSAGES.EMAIL_ALREADY_VERIFIED });
-  } catch (error) {
-    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.VERIFY_EMAIL_ERROR);
-  }
+  res.status(STATUS_CODES.OK).json({ message: MESSAGES.EMAIL_ALREADY_VERIFIED });
 });
 
 // Resend verification code function
 exports.resendVerificationCode = asyncHandler(async (req, res) => {
-  try {
-    const { email } = req.body;
+  const { email } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res
-        .status(STATUS_CODES.NOT_FOUND)
-        .json({ message: MESSAGES.USER_NOT_FOUND });
-    }
+  const user = await User.findOne({ email });
+  if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
 
-    if (user.verified) {
-      return res
-        .status(STATUS_CODES.BAD_REQUEST)
-        .json({ message: MESSAGES.EMAIL_ALREADY_VERIFIED });
-    }
+  if (user.verified) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.EMAIL_ALREADY_VERIFIED };
 
-    // Check if the last request was made within the cooldown period (e.g., 5 minutes)
-    const cooldownPeriod = 5 * 60 * 1000; // 5 minutes in milliseconds
-    if (Date.now() - user.verification.lastRequestedAt < cooldownPeriod) {
-      return res
-        .status(STATUS_CODES.TOO_MANY_REQUESTS)
-        .json({ message: MESSAGES.TOO_MANY_REQUESTS });
-    }
+  // Check if the last request was made within the cooldown period (e.g., 5 minutes)
+  const cooldownPeriod = 60 * 1000; // 5 minutes in milliseconds
+  if (Date.now() - user.verification.lastRequestedAt < cooldownPeriod) throw { statusCode: STATUS_CODES.TOO_MANY_REQUESTS, message: MESSAGES.TOO_MANY_REQUESTS };
 
-    // Generate new 4-digit verification code
-    const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
-    const verificationExpires = Date.now() + 3600000; // 1 hour
+  // Generate new 4-digit verification code
+  const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
+  const verificationExpires = Date.now() + 3600000; // 1 hour
 
-    user.verification.code = verificationCode;
-    user.verification.expiresAt = verificationExpires;
-    user.verification.lastRequestedAt = Date.now();
-    await user.save();
+  user.verification.code = verificationCode;
+  user.verification.expiresAt = verificationExpires;
+  user.verification.lastRequestedAt = Date.now();
+  await user.save();
 
-    // Send verification email
-    await sendVerificationEmail(user.email, verificationCode);
+  // Send verification email
+  await sendVerificationEmail(user.email, verificationCode);
 
-    res
-      .status(STATUS_CODES.OK)
-      .json({ message: MESSAGES.VERIFICATION_CODE_SENT });
-  } catch (error) {
-    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.RESEND_VERIFICATION_CODE_ERROR);
-  }
+  res.status(STATUS_CODES.OK).json({ message: MESSAGES.VERIFICATION_CODE_SENT });
 });
 
 // Request password reset function
 exports.requestPasswordReset = asyncHandler(async (req, res) => {
-  try {
-    const { email } = req.body;
+  const { email } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res
-        .status(STATUS_CODES.NOT_FOUND)
-        .json({ message: MESSAGES.USER_NOT_FOUND });
-    }
+  const user = await User.findOne({ email });
+  if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
 
-    // Generate 4-digit password reset code
-    const resetCode = Math.floor(1000 + Math.random() * 9000).toString();
-    const resetExpires = Date.now() + 3600000; // 1 hour
+  const { verificationCode: resetCode, verificationExpires: resetExpires } = generateVerificationCode();
 
-    user.passwordReset.token = resetCode;
-    user.passwordReset.expiresAt = resetExpires;
-    await user.save();
+  user.passwordReset.token = resetCode;
+  user.passwordReset.expiresAt = resetExpires;
+  await user.save();
 
-    // Send password reset email
-    await sendPasswordResetEmail(user.email, resetCode);
+  await sendPasswordResetEmail(user.email, resetCode);
 
-    res
-      .status(STATUS_CODES.OK)
-      .json({ message: MESSAGES.PASSWORD_RESET_CODE_SENT });
-  } catch (error) {
-    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.REQUEST_PASSWORD_RESET_ERROR);
-  }
+  successHandler(res, STATUS_CODES.OK, MESSAGES.PASSWORD_RESET_CODE_SENT);
 });
 
 // Reset password function
 exports.resetPassword = asyncHandler(async (req, res) => {
-  try {
-    const { email, code, password } = req.body;
+  const { email, code, password } = req.body;
 
-    // Validate the input data
-    const { error } = validateResetPasswordInput({ email, code, password });
-    if (error) {
-      return res
-        .status(STATUS_CODES.BAD_REQUEST)
-        .json({ message: MESSAGES.INVALID_INPUT });
-    }
+  const { error } = validateResetPasswordInput({ email, code, password });
+  if (error) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.INVALID_INPUT };
 
-    // Find the user with the provided email and reset code
-    const user = await findUserByResetCode(email, code);
-    if (!user) {
-      return res
-        .status(STATUS_CODES.BAD_REQUEST)
-        .json({ message: MESSAGES.INVALID_OR_EXPIRED_RESET_CODE });
-    }
+  const user = await findUserByResetCode(email, code);
+  if (!user) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.INVALID_OR_EXPIRED_RESET_CODE };
 
-    // Hash the new password
-    const hashedPassword = await hashPassword(password);
+  const hashedPassword = await hashPassword(password);
 
-    // Reset the user's password
-    await resetUserPassword(user, hashedPassword);
+  await resetUserPassword(user, hashedPassword);
 
-    // Send a success response
-    res
-      .status(STATUS_CODES.OK)
-      .json({ message: MESSAGES.PASSWORD_RESET_SUCCESS });
-  } catch (error) {
-    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.RESET_PASSWORD_ERROR);
-  }
+  successHandler(res, STATUS_CODES.OK, MESSAGES.PASSWORD_RESET_SUCCESS);
 });

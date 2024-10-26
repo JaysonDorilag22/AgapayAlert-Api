@@ -1,142 +1,95 @@
 const User = require('../models/userModel');
-const asyncHandler = require('../utils/asyncHandler');
 const STATUS_CODES = require('../constants/statusCodes');
 const MESSAGES = require('../constants/messages'); 
-const cloudinary = require('../utils/cloudinary');
 const upload = require('../utils/multer');
-const { handleError } = require('../utils/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
+const { successHandler } = require("../utils/successHandler");
+const {uploadAvatar} = require('../utils/avatarUpload');
+const cloudinary = require('../utils/cloudinary');
+const paginate = require('../utils/pagination');
+
 
 // Display users function
 exports.displayUsers = asyncHandler(async (req, res) => {
-  try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const pageSize = parseInt(req.query.pageSize, 10) || 10;
+  const page = parseInt(req.query.page, 10) || 1;
+  const pageSize = parseInt(req.query.pageSize, 10) || 10;
+  const sort = req.query.sort ? JSON.parse(req.query.sort) : {};
+  const filter = req.query.filter ? JSON.parse(req.query.filter) : {};
 
-    if (isNaN(page) || isNaN(pageSize) || page <= 0 || pageSize <= 0) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.INVALID_PAGINATION_PARAMETERS });
-    }
+  const paginationResult = await paginate(User, filter, page, pageSize, 'firstname lastname email verified', sort);
 
-    const skip = (page - 1) * pageSize;
-    const totalUsers = await User.countDocuments();
-    const users = await User.find({}, 'firstname lastname email') 
-      .skip(skip)
-      .limit(pageSize)
-      .lean();
-
-    res.status(STATUS_CODES.OK).json({
-      page,
-      pageSize,
-      totalUsers,
-      totalPages: Math.ceil(totalUsers / pageSize),
-      users,
-    });
-  } catch (error) {
-    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.FETCHING_ERROR);
-  }
+  successHandler(res, STATUS_CODES.OK, 'Users retrieved successfully', {
+    page: paginationResult.page,
+    pageSize: paginationResult.pageSize,
+    totalUsers: paginationResult.totalDocuments,
+    totalPages: paginationResult.totalPages,
+    users: paginationResult.documents,
+  });
 });
 
+// Get user profile
 exports.getUserProfile = asyncHandler(async (req, res) => {
-  try {
-    const userId = req.params.id;
+  const userId = req.params.id;
+  if (!userId) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.USER_ID_REQUIRED };
 
-    if (!userId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.USER_ID_REQUIRED });
-    }
+  const user = await User.findById(userId, 'firstname lastname email profilePicture address avatar').lean();
+  if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
 
-    const user = await User.findById(userId, 'firstname lastname email profilePicture address').lean();
-
-    if (!user) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({ message: 'User not found' });
-    }
-
-    res.status(STATUS_CODES.OK).json({ user });
-  } catch (error) {
-    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.FETCHING_ERROR);
-  }
+  successHandler(res, STATUS_CODES.OK, 'User profile retrieved successfully', { user });
 });
 
 // Edit user information
 exports.editUserInfo = asyncHandler(async (req, res) => {
   upload(req, res, async (err) => {
     if (err) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: err.message });
-    }
-
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ errors: errors.array() });
+      console.log('Upload Error:', err);
+      throw { statusCode: STATUS_CODES.BAD_REQUEST, message: err.message };
     }
 
     const userId = req.params.id;
+    if (!userId) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.USER_ID_REQUIRED };
+
     const { firstname, lastname, email, address, phoneNo, preferred_notifications } = req.body;
 
-    if (!userId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.USER_ID_REQUIRED });
-    }
-
-    // Validate preferred_notifications
     const validNotifications = ['sms', 'push', 'email'];
     if (preferred_notifications && !preferred_notifications.every(notification => validNotifications.includes(notification))) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'Invalid preferred notifications' });
+      throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.INVALID_NOTIFICATIONS };
     }
 
-    try {
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(STATUS_CODES.NOT_FOUND).json({ message: MESSAGES.USER_NOT_FOUND });
+    const user = await User.findById(userId);
+    if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
+
+    let newAvatar = user.avatar;
+    if (req.file) {
+      if (user.avatar && user.avatar.public_id) {
+        await cloudinary.uploader.destroy(user.avatar.public_id);
       }
-
-      // Handle profile picture update
-      let newProfilePictureUrl = user.profilePicture;
-      if (req.file) {
-        // Delete old profile picture from Cloudinary
-        if (user.profilePicture) {
-          const publicId = user.profilePicture.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(publicId);
-        }
-
-        // Upload new profile picture to Cloudinary
-        const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-          folder: 'profile_pictures',
-        });
-        newProfilePictureUrl = uploadResult.secure_url;
-      }
-
-      // Update user information
-      user.firstname = firstname;
-      user.lastname = lastname;
-      user.email = email;
-      user.profilePicture = newProfilePictureUrl;
-      user.address = address;
-      user.phoneNo = phoneNo;
-      user.preferred_notifications = preferred_notifications;
-
-      await user.save();
-
-      res.status(STATUS_CODES.OK).json({ user });
-    } catch (error) {
-      handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.UPDATING_ERROR);
+      const uploadResult = await uploadAvatar(req.file);
+      newAvatar = {
+        public_id: uploadResult.public_id,
+        url: uploadResult.url,
+      };
     }
+
+    const fieldsToUpdate = { firstname, lastname, email, address, phoneNo, preferred_notifications, avatar: newAvatar };
+    Object.keys(fieldsToUpdate).forEach(field => {
+      if (fieldsToUpdate[field] !== undefined) {
+        user[field] = fieldsToUpdate[field];
+      }
+    });
+
+    await user.save();
+    successHandler(res, STATUS_CODES.OK, 'User information updated successfully', { user });
   });
 });
 
 // Delete user account
 exports.deleteUserAccount = asyncHandler(async (req, res) => {
-  try {
-    const userId = req.params.id;
+  const userId = req.params.id;
+  if (!userId) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.USER_ID_REQUIRED };
 
-    if (!userId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: MESSAGES.USER_ID_REQUIRED });
-    }
+  const user = await User.findByIdAndDelete(userId).lean();
+  if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
 
-    const deletedUser = await User.findByIdAndDelete(userId).lean();
-
-    if (!deletedUser) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({ message: MESSAGES.USER_NOT_FOUND });
-    }
-
-    res.status(STATUS_CODES.OK).json({ message: 'User account deleted successfully' });
-  } catch (error) {
-    handleError(res, error, STATUS_CODES.INTERNAL_SERVER_ERROR, MESSAGES.DELETING_ERROR);
-  }
+  successHandler(res, STATUS_CODES.OK, MESSAGES.DELETED_SUCCESSFULLY);
 });

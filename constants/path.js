@@ -9,7 +9,7 @@ const METHODS = {
     // User paths
     AUTH: {
       BASE: '/api/auth',
-      CREATE: { path: '/', method: METHODS.POST },
+      CREATE: { path: '/signup', method: METHODS.POST },
       LOGIN: { path: '/login', method: METHODS.POST },
       LOGOUT: { path: '/logout', method: METHODS.POST },
       VERIFY: { path: '/verify', method: METHODS.POST },

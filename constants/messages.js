@@ -1,4 +1,6 @@
 module.exports = {
+
+  // AUTH AND USER MESSAGES
   USER_NOT_FOUND: 'User not found',
   USER_CREATED_SUCCESSFULLY: 'User created',
   USER_ALREADY_EXISTS: 'User already exists',
@@ -23,5 +25,15 @@ module.exports = {
 
   FETCHING_ERROR: 'An error occurred while fetching',
   DELETING_ERROR: 'Error deleting account',
-  DELETED_SUCCESSFULLY: 'Account deleted successfully'
+  DELETED_SUCCESSFULLY: 'Account deleted successfully',
+
+
+
+  //FEEDBACK MESSAGES
+  FEEDBACK_NOT_FOUND: 'Feedback not found',
+  FEEDBACK_CREATED: 'Feedback created',
+  FEEDBACK_UPDATED: 'Feedback updated',
+  FEEDBACK_DELETED: 'Feedback deleted',
+  FEEDBACK_FETCHED: 'Feedback fetched',
+  FEEDBACKS_FETCHED: 'Feedbacks fetched',
 };

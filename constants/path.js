@@ -46,8 +46,8 @@ const METHODS = {
     // Report paths
     REPORT: {
       BASE: '/api/reports',
-      CREATE: { path: '/', method: METHODS.POST },
-      READ_ALL: { path: '/', method: METHODS.GET },
+      CREATE: { path: '/create', method: METHODS.POST },
+      READ_ALL: { path: '/getall', method: METHODS.GET },
       READ_ONE: { path: '/:id', method: METHODS.GET },
       UPDATE: { path: '/:id', method: METHODS.PUT },
       DELETE: { path: '/:id', method: METHODS.DELETE },

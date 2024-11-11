@@ -7,6 +7,7 @@ const connectDB = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes')
 const feedbackRoutes = require('./routes/feedbackRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 const { PATHS } = require('./constants/path');
 const errorMiddleware = require('./utils/errorMiddleware');
 const { pipeline } = require('nodemailer/lib/xoauth2');
@@ -27,6 +28,7 @@ app.get('/', (req, res) => {
 app.use(PATHS.USER.BASE, userRoutes);
 app.use(PATHS.AUTH.BASE, authRoutes);
 app.use(PATHS.FEEDBACK.BASE, feedbackRoutes);
+app.use(PATHS.REPORT.BASE, reportRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

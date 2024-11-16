@@ -34,6 +34,7 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
 
   const user = await User.findById(userId, 'firstname lastname email profilePicture address avatar').lean();
   if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
+  console.log('User:', user);
 
   successHandler(res, STATUS_CODES.OK, 'User profile retrieved successfully', { user });
 });

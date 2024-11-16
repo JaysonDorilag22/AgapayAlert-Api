@@ -53,6 +53,7 @@ exports.login = asyncHandler(async (req, res) => {
 // Logout function
 exports.logout = asyncHandler(async (req, res) => {
   res.clearCookie("token");
+  console.log("Token cleared"); 
   successHandler(res, STATUS_CODES.OK, MESSAGES.LOGGED_OUT_SUCCESSFULLY);
 });
 

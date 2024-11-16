@@ -27,8 +27,6 @@ module.exports = {
   DELETING_ERROR: 'Error deleting account',
   DELETED_SUCCESSFULLY: 'Account deleted successfully',
 
-
-
   //FEEDBACK MESSAGES
   FEEDBACK_NOT_FOUND: 'Feedback not found',
   FEEDBACK_CREATED: 'Feedback created',
@@ -36,4 +34,10 @@ module.exports = {
   FEEDBACK_DELETED: 'Feedback deleted',
   FEEDBACK_FETCHED: 'Feedback fetched',
   FEEDBACKS_FETCHED: 'Feedbacks fetched',
+
+
+  //UNAUTHORIZED MESSAGES
+  UNAUTHORIZED: 'Unauthorized',
+  FORBIDDEN: 'Forbidden',
+  
 };

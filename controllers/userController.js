@@ -79,6 +79,8 @@ exports.editUserInfo = asyncHandler(async (req, res) => {
       }
     });
 
+    console.log('User is upating');
+
     await user.save();
     successHandler(res, STATUS_CODES.OK, 'User information updated successfully', { user });
   });

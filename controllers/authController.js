@@ -11,6 +11,7 @@ const { handleVerification, generateVerificationCode } = require("../utils/verif
 const { validateResetPasswordInput } = require("../helpers/validationHelper");
 const { sendVerificationEmail } = require("../utils/sendEmail");
 const { findUserByResetCode, hashPassword, resetUserPassword, validateRequestBody, handleExistingUser, createUser } = require("../helpers/userHelper");
+const { uploadAvatar } = require("../utils/avatarUpload");
 
 // Signup function
 exports.signup = asyncHandler(async (req, res) => {
@@ -27,9 +28,29 @@ exports.signup = asyncHandler(async (req, res) => {
       return handleExistingUser(res, existingUser);
     }
 
-    await createUser(req, res, { firstname, lastname, email, password, address, phoneNo });
+    const avatarData = await uploadAvatar(req.file);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const { verificationCode, verificationExpires } = generateVerificationCode();
 
-    successHandler(res, STATUS_CODES.CREATED, MESSAGES.USER_CREATED_SUCCESSFULLY);
+    const user = new User({
+      firstname,
+      lastname,
+      email,
+      password: hashedPassword,
+      address,
+      phoneNo,
+      avatar: avatarData,
+      verification: {
+        code: verificationCode,
+        expiresAt: verificationExpires,
+        lastRequestedAt: Date.now(),
+      },
+    });
+
+    await user.save();
+    await sendVerificationEmail(user.email, verificationCode);
+
+    return res.status(STATUS_CODES.CREATED).json({ message: MESSAGES.VERIFICATION_CODE_SENT });
   });
 });
 

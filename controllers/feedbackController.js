@@ -5,7 +5,6 @@ const STATUS_CODES = require("../constants/statusCodes");
 const asyncHandler = require("../utils/asyncHandler");
 const { successHandler } = require("../utils/successHandler");
 
-
 exports.addFeedback = asyncHandler(async (req, res) => {
     const { userId, comment, ratings } = req.body;
 
@@ -29,7 +28,6 @@ exports.getFeedback = asyncHandler(async (req, res) => {
     }
     successHandler(res, STATUS_CODES.OK, MESSAGES.FEEDBACK_FETCHED, feedback);
 });
-
 
 exports.getFeedbacks = asyncHandler(async (req, res) => {
     const feedbacks = await Feedback.find();
@@ -56,7 +54,70 @@ exports.deleteFeedback = asyncHandler(async (req, res) => {
     successHandler(res, STATUS_CODES.OK, MESSAGES.FEEDBACK_DELETED);
 });
 
+exports.getOverallRatings = asyncHandler(async (req, res) => {
+    const overallRatings = await Feedback.aggregate([
+        {
+            $group: {
+                _id: null,
+                totalRatings: { $sum: "$ratings" },
+                ratingsPerDay: {
+                    $push: {
+                        date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                        rating: "$ratings"
+                    }
+                },
+                ratingsPerMonth: {
+                    $push: {
+                        date: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                        rating: "$ratings"
+                    }
+                },
+                ratingsPerYear: {
+                    $push: {
+                        date: { $dateToString: { format: "%Y", date: "$createdAt" } },
+                        rating: "$ratings"
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                totalRatings: 1,
+                ratingsPerDay: {
+                    $arrayToObject: {
+                        $map: {
+                            input: "$ratingsPerDay",
+                            as: "item",
+                            in: { k: "$$item.date", v: "$$item.rating" }
+                        }
+                    }
+                },
+                ratingsPerMonth: {
+                    $arrayToObject: {
+                        $map: {
+                            input: "$ratingsPerMonth",
+                            as: "item",
+                            in: { k: "$$item.date", v: "$$item.rating" }
+                        }
+                    }
+                },
+                ratingsPerYear: {
+                    $arrayToObject: {
+                        $map: {
+                            input: "$ratingsPerYear",
+                            as: "item",
+                            in: { k: "$$item.date", v: "$$item.rating" }
+                        }
+                    }
+                }
+            }
+        }
+    ]);
 
+    if (!overallRatings || overallRatings.length === 0) {
+        throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.OVERALL_RATINGS_NOT_FOUND };
+    }
 
-
-
+    successHandler(res, STATUS_CODES.OK, MESSAGES.OVERALL_RATINGS_FETCHED, overallRatings[0]);
+});

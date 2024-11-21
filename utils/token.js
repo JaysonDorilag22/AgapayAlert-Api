@@ -8,8 +8,8 @@ const createToken = (user) => {
 const setTokenCookie = (res, token) => {
   res.cookie('token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', 
-    maxAge: 3600000, 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 3600000,
   });
 };
 

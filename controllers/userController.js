@@ -34,52 +34,70 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
 
   const user = await User.findById(userId, 'firstname lastname email profilePicture address avatar').lean();
   if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
+  console.log('User:', user);
 
   successHandler(res, STATUS_CODES.OK, 'User profile retrieved successfully', { user });
 });
 
 // Edit user information
-exports.editUserInfo = asyncHandler(async (req, res) => {
+exports.editUserInfo = asyncHandler(async (req, res, next) => {
   upload(req, res, async (err) => {
     if (err) {
       console.log('Upload Error:', err);
-      throw { statusCode: STATUS_CODES.BAD_REQUEST, message: err.message };
+      return next({ statusCode: STATUS_CODES.BAD_REQUEST, message: err.message });
     }
 
-    const userId = req.params.id;
-    if (!userId) throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.USER_ID_REQUIRED };
+    try {
+      const { id: userId } = req.params;
+      if (!userId) return next({ statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.USER_ID_REQUIRED });
 
-    const { firstname, lastname, email, address, phoneNo, preferred_notifications } = req.body;
+      const { firstname, lastname, email, address, phoneNo, preferred_notifications } = req.body;
 
-    const validNotifications = ['sms', 'push', 'email'];
-    if (preferred_notifications && !preferred_notifications.every(notification => validNotifications.includes(notification))) {
-      throw { statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.INVALID_NOTIFICATIONS };
-    }
-
-    const user = await User.findById(userId);
-    if (!user) throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND };
-
-    let newAvatar = user.avatar;
-    if (req.file) {
-      if (user.avatar && user.avatar.public_id) {
-        await cloudinary.uploader.destroy(user.avatar.public_id);
+      const validNotifications = ['sms', 'push', 'email'];
+      if (preferred_notifications) {
+        if (!Array.isArray(preferred_notifications)) {
+          return next({ statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.INVALID_NOTIFICATIONS });
+        }
+        if (preferred_notifications.length > 2) {
+          return next({ statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.TOO_MANY_NOTIFICATIONS });
+        }
+        if (!preferred_notifications.every(notification => validNotifications.includes(notification))) {
+          return next({ statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.INVALID_NOTIFICATIONS });
+        }
       }
-      const uploadResult = await uploadAvatar(req.file);
-      newAvatar = {
-        public_id: uploadResult.public_id,
-        url: uploadResult.url,
-      };
-    }
 
-    const fieldsToUpdate = { firstname, lastname, email, address, phoneNo, preferred_notifications, avatar: newAvatar };
-    Object.keys(fieldsToUpdate).forEach(field => {
-      if (fieldsToUpdate[field] !== undefined) {
-        user[field] = fieldsToUpdate[field];
+      const user = await User.findById(userId);
+      if (!user) return next({ statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.USER_NOT_FOUND });
+
+      if (req.file) {
+        if (user.avatar && user.avatar.public_id) {
+          await cloudinary.uploader.destroy(user.avatar.public_id);
+        }
+        const uploadResult = await uploadAvatar(req.file);
+        user.avatar = {
+          public_id: uploadResult.public_id,
+          url: uploadResult.url,
+        };
       }
-    });
 
-    await user.save();
-    successHandler(res, STATUS_CODES.OK, 'User information updated successfully', { user });
+      if (firstname !== undefined) user.firstname = firstname;
+      if (lastname !== undefined) user.lastname = lastname;
+      if (email !== undefined) user.email = email;
+      if (address) {
+        if (address.street !== undefined) user.address.street = address.street;
+        if (address.city !== undefined) user.address.city = address.city;
+        if (address.state !== undefined) user.address.state = address.state;
+        if (address.zipCode !== undefined) user.address.zipCode = address.zipCode;
+        if (address.country !== undefined) user.address.country = address.country;
+      }
+      if (phoneNo !== undefined) user.phoneNo = phoneNo;
+      if (preferred_notifications !== undefined) user.preferred_notifications = preferred_notifications;
+
+      await user.save();
+      successHandler(res, STATUS_CODES.OK, 'User information updated successfully', { user });
+    } catch (error) {
+      next(error);
+    }
   });
 });
 

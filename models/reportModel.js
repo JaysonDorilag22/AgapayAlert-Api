@@ -6,6 +6,12 @@ const reportSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      relationship: 
+      { 
+        type: String, 
+        enum: ["Parent", "Sibling","Relative", "Friend", "Spouse", "Child", "Colleague", "Other"], 
+        required: true
+      },
     },
     missingPerson: {
       firstname: { type: String, required: true },
@@ -13,16 +19,14 @@ const reportSchema = new mongoose.Schema(
       dateOfBirth: { type: Date, required: true },
       age: { type: Number, required: true },
       assignedSexAtBirth: { type: String, enum: ["Male", "Female"], required: true },
-      scarsOrMarks: { type: String, required: true },
-      prostheticsOrImplants: { type: String, required: true },
-      lastKnownClothing: { type: String, required: true },
+      scarsOrMarks: { type: String},
+      prostheticsOrImplants: { type: String },
+      lastKnownClothing: { type: String },
       lastKnownLocation: { type: String, required: true },
       lastSeen: { type: Date, required: true },
       causeOfDisappearance: { type: String, required: true },
-      currentHairColor: {
-        type: String,
-        required: true,
-      },
+      currentHairColor: { type: String},
+      dyedHairColor: { type: Boolean, default: false },
       alias: { type: String },
       genderIdentity: { type: String },
       height: { type: String },
@@ -44,7 +48,7 @@ const reportSchema = new mongoose.Schema(
       },
       medication: { type: String },
       birthDefects: { type: String },
-      contactNumber: { type: String, required: true },
+      contactNumber: { type: String },
       socialMediaAccount: { type: String },
     },
     status: {

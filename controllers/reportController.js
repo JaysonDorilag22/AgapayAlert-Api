@@ -8,16 +8,11 @@ const multer = require('multer');
 const path = require('path');
 
 // Set up Cloudinary storage engine
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'report Files',
-    format: async (req, file) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      return ext === '.mp4' || ext === '.avi' || ext === '.mkv' ? 'mp4' : 'jpg'; // supports only jpg and mp4 formats
-    },
-    public_id: (req, file) => `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`,
-  },
+const storage = multer.diskStorage({
+  destination: './uploads/',
+  filename: (req, file, cb) => {
+    cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
+  }
 });
 
 // Initialize upload

@@ -29,6 +29,16 @@ const reportRoutes = [
         path: PATHS.REPORT.DELETE.path,
         handler: reportController.deleteReportById,
     },
+    {
+        method: METHODS.POST,
+        path: PATHS.REPORT.POST_REPORT.path,
+        handler: reportController.postReportToFacebook,
+    },
+    {
+        method: METHODS.DELETE,
+        path: PATHS.REPORT.DELETE_POST.path,
+        handler: reportController.deleteReportFromFacebook,
+    }
 ];
 
 reportRoutes.forEach(route => {

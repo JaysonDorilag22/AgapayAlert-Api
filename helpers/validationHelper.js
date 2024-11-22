@@ -37,27 +37,44 @@ const feedbackSchema = Joi.object({
 
 // Report validation schema
 const reportSchema = Joi.object({
-  userId: Joi.string().required(),
-  name: Joi.string().required(),
-  age: Joi.number().required(),
-  type: Joi.string().valid('missing', 'abducted', 'wanted', 'kidnapped').required(),
-  last_seen_location: Joi.object({
-    type: Joi.string().valid('Point').default('Point'),
-    coordinates: Joi.array().items(Joi.number()).length(2).default([0, 0]),
-  }).optional(),
-  images: Joi.array().items(Joi.object({
-    public_id: Joi.string().allow(''),
-    url: Joi.string().allow(''),
-  })).optional(),
-  video: Joi.object({
-    public_id: Joi.string().allow(''),
-    url: Joi.string().allow(''),
-  }).optional(),
-  description: Joi.string().required(),
-  reward: Joi.number().optional(),
-  contact_information: Joi.string().required(),
-  status: Joi.string().valid('Verified', 'Closed', 'Pending').default('Pending'),
+  reporter: Joi.string().required(),
+  missingPerson: Joi.object({
+    name: Joi.string().required(),
+    dateOfBirth: Joi.date().required(),
+    age: Joi.number().required(),
+    assignedSexAtBirth: Joi.string().valid('Male', 'Female').required(),
+    scarsOrMarks: Joi.string().required(),
+    prostheticsOrImplants: Joi.string().required(),
+    lastKnownClothing: Joi.string().required(),
+    lastKnownLocation: Joi.string().required(),
+    lastSeen: Joi.date().required(),
+    causeOfDisappearance: Joi.string().required(),
+    currentHairColor: Joi.string().required(),
+    alias: Joi.string().optional(),
+    genderIdentity: Joi.string().optional(),
+    height: Joi.string().optional(),
+    weight: Joi.string().optional(),
+    raceOrNationality: Joi.string().optional(),
+    eyeColor: Joi.string().optional(),
+    wearsContactLenses: Joi.boolean().default(false),
+    bloodType: Joi.string().optional(),
+    reward: Joi.number().optional(),
+    images: Joi.array().items(Joi.object({
+      public_id: Joi.string().default('').required(),
+      url: Joi.string().default('').required(),
+    })).optional(),
+    video: Joi.array().items(Joi.object({
+      public_id: Joi.string().default(''),
+      url: Joi.string().default(''),
+    })).optional(),
+    medication: Joi.string().optional(),
+    birthDefects: Joi.string().optional(),
+    contactNumber: Joi.string().optional(),
+    socialMediaAccount: Joi.string().optional(),
+  }).required(),
+  createdAt: Joi.date().default(Date.now),
 });
+
 
 // Notification validation schema
 const notificationSchema = Joi.object({

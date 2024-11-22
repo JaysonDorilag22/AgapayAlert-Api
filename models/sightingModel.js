@@ -41,6 +41,12 @@ const sightingSchema = new mongoose.Schema(
         url: { type: String, default: "", required: true },
       },
     ],
+    status: {
+        type: String,
+        enum: ["Pending", "In Process", "Resolved"],
+        default: "Pending",
+        required: true,
+      },
     createdAt: { type: Date, default: Date.now },
   },
   {

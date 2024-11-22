@@ -12,15 +12,15 @@ const sightingSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    name: {
-      type: String,
-      required: true,
-    },
-    fullName: {
-      type: String,
-      required: true,
-    },
     locationSeen: {
+      type: String,
+      required: true,
+    },
+    dateSeen: {
+      type: Date,
+      required: true,
+    },
+    description: {
       type: String,
       required: true,
     },
@@ -42,11 +42,11 @@ const sightingSchema = new mongoose.Schema(
       },
     ],
     status: {
-        type: String,
-        enum: ["Pending", "In Process", "Resolved"],
-        default: "Pending",
-        required: true,
-      },
+      type: String,
+      enum: ["Pending", "In Process", "Resolved"],
+      default: "Pending",
+      required: true,
+    },
     createdAt: { type: Date, default: Date.now },
   },
   {

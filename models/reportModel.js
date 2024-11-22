@@ -53,6 +53,11 @@ const reportSchema = new mongoose.Schema(
       default: "Pending",
       required: true,
     },
+    category: {
+      type: String,
+      enum: ["Missing", "Abducted", "Wanted", "Hit and Run"],
+      required: true,
+    },
     createdAt: { type: Date, default: Date.now },
   },
   {

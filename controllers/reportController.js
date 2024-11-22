@@ -7,12 +7,17 @@ const cloudinary = require('../utils/cloudinary');
 const multer = require('multer');
 const path = require('path');
 
-// Set storage engine
-const storage = multer.diskStorage({
-  destination: './uploads/',
-  filename: (req, file, cb) => {
-    cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
-  }
+// Set up Cloudinary storage engine
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'report Files',
+    format: async (req, file) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      return ext === '.mp4' || ext === '.avi' || ext === '.mkv' ? 'mp4' : 'jpg'; // supports only jpg and mp4 formats
+    },
+    public_id: (req, file) => `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`,
+  },
 });
 
 // Initialize upload
@@ -57,12 +62,13 @@ exports.createReport = [
     console.log('Files:', req.files); // Log the files being uploaded
     console.log('Body:', req.body); // Log the body of the request
 
-    const { reporter, missingPerson } = req.body;
+    const { reporter, missingPerson, category } = req.body;
     const images = req.files.images || [];
     const video = req.files.video ? req.files.video[0] : null;
 
     console.log('Reporter:', reporter);
     console.log('Missing Person:', missingPerson);
+    console.log('Category:', category);
     console.log('Images:', images.map(image => image.originalname));
     console.log('Video:', video ? video.originalname : 'No video uploaded');
 
@@ -81,6 +87,7 @@ exports.createReport = [
             images: imageUploadResults.map(result => ({ public_id: result.public_id, url: result.secure_url })),
             video: videoUploadResult ? { public_id: videoUploadResult.public_id, url: videoUploadResult.secure_url } : null,
         },
+        category,
     });
 
     res.status(STATUS_CODES.CREATED).json(report);
@@ -121,12 +128,13 @@ exports.updateReportById = [
     console.log('Files:', req.files); // Log the files being uploaded
     console.log('Body:', req.body); // Log the body of the request
 
-    const { reporter, missingPerson } = req.body;
+    const { reporter, missingPerson, category } = req.body;
     const images = req.files.images || [];
     const video = req.files.video ? req.files.video[0] : null;
 
     console.log('Reporter:', reporter);
     console.log('Missing Person:', missingPerson);
+    console.log('Category:', category);
     console.log('Images:', images.map(image => image.originalname));
     console.log('Video:', video ? video.originalname : 'No video uploaded');
 
@@ -150,6 +158,7 @@ exports.updateReportById = [
         images: imageUploadResults.length ? imageUploadResults.map(result => ({ public_id: result.public_id, url: result.secure_url })) : report.missingPerson.images,
         video: videoUploadResult ? { public_id: videoUploadResult.public_id, url: videoUploadResult.secure_url } : report.missingPerson.video,
     };
+    report.category = category || report.category;
 
     await report.save();
 

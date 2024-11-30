@@ -7,6 +7,8 @@ const cloudinary = require("../utils/cloudinary");
 const multer = require("multer");
 const path = require("path");
 const axios = require("axios");
+const createFacebookMessage = require("../views/facebookMessage");
+require("dotenv").config();
 // Set up Cloudinary storage engine
 const storage = multer.diskStorage({
   destination: "./uploads/",
@@ -223,43 +225,60 @@ exports.deleteReportById = asyncHandler(async (req, res) => {
       .json({ message: MESSAGES.REPORT_NOT_FOUND });
   }
 
-  await report.remove();
+  await report.deleteOne();
 
   res.status(STATUS_CODES.OK).json({ message: MESSAGES.REPORT_DELETED });
 });
 
+
+
 exports.postReportToFacebook = asyncHandler(async (req, res) => {
-  const pageAccessToken =
-    "EAAIE5Cy5L18BOxLCghmnj0dwEv9ZAqZC5y3ZCzL67hOI1v9y78MWzZCP0KjWuq1M7vmrGgZAmrLZBh2DDwHWvR4qI32XTisyZCOuPzDUX5ZCBZBequ8ZC1TyuftgX0aozOYKa4CefkH8B9I0RZAvLqzRGZAdJXswyM2Ec9ZCcIYhg2ev5rfP67zoKa38IFxLozgHfGgtu"; // Replace with your Facebook Page Access Token
-  const pageId = "514454438410782"; 
+  const pageAccessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+  const pageId = process.env.FACEBOOK_PAGE_ID;
   const reportId = req.params.id;
 
   // Fetch the report from the database
   const report = await Report.findById(reportId);
 
   if (!report) {
-    return res
-      .status(STATUS_CODES.NOT_FOUND)
-      .json({ message: "Report not found" });
+    return res.status(STATUS_CODES.NOT_FOUND).json({ message: "Report not found" });
   }
 
-  const { reporter, missingPerson, category } = report;
+  const message = createFacebookMessage(report);
+  const imageUrl = report.missingPerson.images && report.missingPerson.images[0] ? report.missingPerson.images[0].url : null;
 
-  const message = `
-🚨 ${category} Person Alert! 🚨
-Name: ${missingPerson.firstname} ${missingPerson.lastname}
-Age: ${missingPerson.age || "N/A"}
-Last known location: ${missingPerson.lastKnownLocation || "Unknown location"}
-Last Seen: ${missingPerson.lastSeen || "Unknown location"}
-Category: ${category || "Uncategorized"}
-Reported By: ${reporter}
+  const postToFacebook = async (postData) => {
+    try {
+      const postResponse = await axios.post(`https://graph.facebook.com/v21.0/${pageId}/feed`, postData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-📞 Contact us if you have any information!`;
+      console.log("Post created:", postResponse.data);
 
-  const imageUrl =
-    missingPerson.images && missingPerson.images[0]
-      ? missingPerson.images[0].url
-      : null;
+      // Save the Facebook post ID to the report
+      report.facebookPostId = postResponse.data.id;
+      report.broadcastHistory.push({
+        channel: "Facebook",
+        status: "Sent",
+        timestamp: new Date(),
+      });
+      await report.save();
+
+      res.status(STATUS_CODES.OK).json({
+        message: "Report posted to Facebook",
+        postId: postResponse.data.id,
+      });
+    } catch (error) {
+      console.error("Error posting to Facebook:", error.response ? error.response.data : error.message);
+      report.broadcastHistory.push({
+        channel: "Facebook",
+        status: "Failed",
+        timestamp: new Date(),
+      });
+      await report.save();
+      res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: "Failed to post report to Facebook" });
+    }
+  };
 
   if (imageUrl) {
     const formData = new FormData();
@@ -267,86 +286,38 @@ Reported By: ${reporter}
     formData.append("access_token", pageAccessToken);
 
     try {
-      const uploadResponse = await axios.post(
-        `https://graph.facebook.com/v21.0/${pageId}/photos`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const uploadResponse = await axios.post(`https://graph.facebook.com/v21.0/${pageId}/photos`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       const photoId = uploadResponse.data.id;
       const postData = new FormData();
       postData.append("message", message);
       postData.append("access_token", pageAccessToken);
-      postData.append("object_attachment", photoId); 
+      postData.append("object_attachment", photoId);
 
-      const postResponse = await axios.post(
-        `https://graph.facebook.com/v21.0/${pageId}/feed`,
-        postData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      console.log("Post created:", postResponse.data);
-      res
-        .status(STATUS_CODES.OK)
-        .json({
-          message: "Report posted to Facebook",
-          postId: postResponse.data.id,
-        });
+      await postToFacebook(postData);
     } catch (error) {
-      console.error(
-        "Error posting to Facebook:",
-        error.response ? error.response.data : error.message
-      );
-      res
-        .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-        .json({ message: "Failed to post report to Facebook" });
+      console.error("Error uploading image to Facebook:", error.response ? error.response.data : error.message);
+      report.broadcastHistory.push({
+        channel: "Facebook",
+        status: "Failed",
+        timestamp: new Date(),
+      });
+      await report.save();
+      res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: "Failed to upload image to Facebook" });
     }
   } else {
-    // If no image URL is available, just post the message without the image
-    try {
-      const postData = new FormData();
-      postData.append("message", message);
-      postData.append("access_token", pageAccessToken);
+    const postData = new FormData();
+    postData.append("message", message);
+    postData.append("access_token", pageAccessToken);
 
-      const postResponse = await axios.post(
-        `https://graph.facebook.com/v21.0/${pageId}/feed`,
-        postData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      console.log("Post created:", postResponse.data);
-      res
-        .status(STATUS_CODES.OK)
-        .json({
-          message: "Report posted to Facebook",
-          postId: postResponse.data.id,
-        });
-    } catch (error) {
-      console.error(
-        "Error posting to Facebook:",
-        error.response ? error.response.data : error.message
-      );
-      res
-        .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-        .json({ message: "Failed to post report to Facebook" });
-    }
+    await postToFacebook(postData);
   }
 });
 
 exports.deleteReportFromFacebook = asyncHandler(async (req, res) => {
-  const pageAccessToken = "EAAIE5Cy5L18BOxLCghmnj0dwEv9ZAqZC5y3ZCzL67hOI1v9y78MWzZCP0KjWuq1M7vmrGgZAmrLZBh2DDwHWvR4qI32XTisyZCOuPzDUX5ZCBZBequ8ZC1TyuftgX0aozOYKa4CefkH8B9I0RZAvLqzRGZAdJXswyM2Ec9ZCcIYhg2ev5rfP67zoKa38IFxLozgHfGgtu"; // Replace with your Facebook Page Access Token
+  const pageAccessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
   const postId = req.params.postId; // The ID of the Facebook post to delete
 
   try {
@@ -368,4 +339,15 @@ exports.deleteReportFromFacebook = asyncHandler(async (req, res) => {
     );
     res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: "Failed to delete report from Facebook" });
   }
+});
+
+
+exports.getAllFacebookPostIds = asyncHandler(async (req, res) => {
+  const reports = await Report.find();
+
+  const postIds = reports
+    .map((report) => report.facebookPostId)
+    .filter((postId) => postId); 
+
+  res.status(STATUS_CODES.OK).json(postIds);
 });

@@ -62,6 +62,14 @@ const reportSchema = new mongoose.Schema(
       enum: ["Missing", "Abducted", "Wanted", "Hit and Run"],
       required: true,
     },
+    facebookPostId: { type: String },
+    broadcastHistory: [
+      {
+        channel: { type: String, enum: ["Facebook", "SMS", "Push"], required: false },
+        status: { type: String, enum: ["Pending", "Sent", "Failed"], required: false },
+        timestamp: { type: Date, default: Date.now, required: false },
+      },
+    ],
     createdAt: { type: Date, default: Date.now },
   },
   {

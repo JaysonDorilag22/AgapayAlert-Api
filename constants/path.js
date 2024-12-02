@@ -60,7 +60,7 @@ const PATHS = {
   // Notification paths
   NOTIFICATION: {
     BASE: "/api/notifications",
-    CREATE: { path: "/", method: METHODS.POST },
+    CREATE: { path: "/create", method: METHODS.POST },
     READ_ALL: { path: "/", method: METHODS.GET },
     READ_ONE: { path: "/:id", method: METHODS.GET },
     UPDATE: { path: "/:id", method: METHODS.PUT },

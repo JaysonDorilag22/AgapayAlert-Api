@@ -21,6 +21,11 @@ const notificationRoutes = [
     },
     {
         method: METHODS.POST,
+        path: PATHS.NOTIFICATION.TEST_SMS.path,
+        handler: notificationController.sendInfobipSms
+    },
+    {
+        method: METHODS.POST,
         path: PATHS.NOTIFICATION.EMAIL.path,
         handler: notificationController.sendEmailNotification,
     },

@@ -62,6 +62,7 @@ const PATHS = {
     BASE: "/api/notifications",
     CREATE: { path: "/create", method: METHODS.POST },
     SMS: { path: "/sms", method: METHODS.POST },
+    TEST_SMS: {path: "/test-sms", method: METHODS.POST},
     EMAIL: { path: "/email", method: METHODS.POST },
     READ_ALL: { path: "/getAll", method: METHODS.GET },
     READ_ONE: { path: "/:id", method: METHODS.GET },
@@ -83,10 +84,8 @@ const PATHS = {
   ALPR: {
     BASE: "/api/alprs",
     CREATE: { path: "/", method: METHODS.POST },
-    READ_ALL: { path: "/", method: METHODS.GET },
-    READ_ONE: { path: "/:id", method: METHODS.GET },
-    UPDATE: { path: "/:id", method: METHODS.PUT },
-    DELETE: { path: "/:id", method: METHODS.DELETE },
+    READ_ALL: { path: "/:id", method: METHODS.GET },
+    RECOGNIZE: { path: "/recognize", method: METHODS.POST },
   },
 
   // Chat paths

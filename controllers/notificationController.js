@@ -15,9 +15,15 @@ const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
+const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
+const INFOBIP_BASE_URL = process.env.INFOBIP_BASE_URL;
+
 
 console.log('OneSignal App ID:', ONESIGNAL_APP_ID);
 console.log('OneSignal API Key:', ONESIGNAL_API_KEY);
+
+console.log('infoBip API Key:', INFOBIP_API_KEY);
+console.log('infoBip Base URL:', INFOBIP_BASE_URL);
 
 const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
@@ -323,6 +329,48 @@ exports.sendEmailNotification = asyncHandler(async (req, res) => {
     res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       message: 'Failed to send email notification',
       error: error.message,
+    });
+  }
+});
+
+exports.sendInfobipSms = asyncHandler(async (req, res) => {
+  const { to, message } = req.body;
+
+  if (!to || !message) {
+    return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'Phone number and message are required' });
+  }
+
+  const smsPayload = {
+    messages: [
+      {
+        from: 'InfoSMS', // Updated sender ID
+        destinations: [{ to }],
+        text: message,
+      },
+    ],
+  };
+
+  try {
+    const response = await axios.post(
+      `${INFOBIP_BASE_URL}/sms/2/text/advanced`,
+      smsPayload,
+      {
+        headers: {
+          'Authorization': `App ${INFOBIP_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    console.log('Infobip response:', response.data);
+    response.data.messages.forEach(msg => {
+      console.log('Message status:', msg.status);
+    });
+    res.status(STATUS_CODES.OK).json({ message: 'SMS sent successfully', response: response.data });
+  } catch (error) {
+    console.error('Error sending SMS via Infobip:', error.response ? error.response.data : error.message);
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      message: 'Failed to send SMS via Infobip',
+      error: error.response ? error.response.data : error.message,
     });
   }
 });

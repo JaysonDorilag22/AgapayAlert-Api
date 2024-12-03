@@ -5,13 +5,23 @@ const STATUS_CODES = require('../constants/statusCodes');
 const MESSAGES = require('../constants/messages');
 const asyncHandler = require('../utils/asyncHandler');
 const Notification = require('../models/notificationModel');
+const twilio = require('twilio');
+const { transporter } = require('../utils/sendEmail');
+const notificationEmailTemplate = require('../views/notificationEmailTemplate');
 require('dotenv').config();
 
 const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
 const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
 console.log('OneSignal App ID:', ONESIGNAL_APP_ID);
 console.log('OneSignal API Key:', ONESIGNAL_API_KEY);
+
+const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+
+
 
 exports.createNotification = asyncHandler(async (req, res) => {
   const { title, message, confirmation, tier, reportId } = req.body;
@@ -100,4 +110,225 @@ exports.createNotification = asyncHandler(async (req, res) => {
     notification,
     users: userDetails,
   });
+});
+
+//ok na to kaso need verify yung number
+exports.sendSmsNotification = asyncHandler(async (req, res) => {
+  const { title, message, reportId } = req.body;
+
+  if (!reportId) {
+    throw { statusCode: STATUS_CODES.BAD_REQUEST, message: 'Report ID is required' };
+  }
+
+  const report = await Report.findById(reportId);
+  if (!report || report.status !== 'Confirmed') {
+    throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.REPORT_NOT_FOUND };
+  }
+
+  const notificationMessage = `
+    Name: ${report.missingPerson.firstname} ${report.missingPerson.lastname}
+    Age: ${report.missingPerson.age}
+    Last Known Location: ${report.missingPerson.lastKnownLocation}
+    Last Known Clothing: ${report.missingPerson.lastKnownClothing}
+    Last Seen: ${report.missingPerson.lastSeen}
+  `;
+
+  const users = await User.find({
+    preferred_notifications: 'sms',
+  });
+
+  if (users.length === 0) {
+    return res.status(STATUS_CODES.NOT_FOUND).json({ message: 'No users found for SMS notifications.' });
+  }
+
+  const smsMessages = users
+    .filter(user => user.phoneNo) // Ensure phoneNo is not empty
+    .map(user => {
+      let phoneNumber = user.phoneNo;
+      if (!phoneNumber.startsWith('+')) {
+        phoneNumber = `+63${phoneNumber.slice(1)}`; // Ensure phone number includes country code
+      }
+      return {
+        to: phoneNumber,
+        body: notificationMessage,
+        from: TWILIO_PHONE_NUMBER,
+      };
+    });
+
+  if (smsMessages.length === 0) {
+    return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'No valid phone numbers found for SMS notifications.' });
+  }
+
+  console.log('SMS Messages:', smsMessages); // Log the SMS messages to verify the phone_number
+
+  try {
+    const responses = await Promise.all(smsMessages.map(async (sms) => {
+      console.log('Sending SMS to:', sms.to); // Log the phone number being sent
+      const response = await client.messages.create(sms);
+      return response;
+    }));
+
+    console.log('Twilio responses:', responses);
+
+    res.status(STATUS_CODES.CREATED).json({
+      message: MESSAGES.NOTIFICATION_CREATED,
+      responses,
+      users: users.map(user => ({
+        name: `${user.firstname} ${user.lastname}`,
+        phoneNumber: user.phoneNo,
+      })),
+    });
+  } catch (error) {
+    console.error('Error sending SMS notification:', error);
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      message: 'Failed to send SMS notification',
+      error: error.message,
+    });
+  }
+});
+
+
+exports.sendSmsNotification = asyncHandler(async (req, res) => {
+  const { title, message, reportId } = req.body;
+
+  if (!reportId) {
+    throw { statusCode: STATUS_CODES.BAD_REQUEST, message: 'Report ID is required' };
+  }
+
+  const report = await Report.findById(reportId);
+  if (!report || report.status !== 'Confirmed') {
+    throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.REPORT_NOT_FOUND };
+  }
+
+  const notificationMessage = `
+    Name: ${report.missingPerson.firstname} ${report.missingPerson.lastname}
+    Age: ${report.missingPerson.age}
+    Last Known Location: ${report.missingPerson.lastKnownLocation}
+    Last Known Clothing: ${report.missingPerson.lastKnownClothing}
+    Last Seen: ${report.missingPerson.lastSeen}
+  `;
+
+  const users = await User.find({
+    preferred_notifications: 'sms',
+  });
+
+  if (users.length === 0) {
+    return res.status(STATUS_CODES.NOT_FOUND).json({ message: 'No users found for SMS notifications.' });
+  }
+
+  const smsMessages = users
+    .filter(user => user.phoneNo) // Ensure phoneNo is not empty
+    .map(user => ({
+      to: user.phoneNo.startsWith('+') ? user.phoneNo : `+63${user.phoneNo.slice(1)}`, // Ensure phone number includes country code
+      body: notificationMessage,
+      from: TWILIO_PHONE_NUMBER,
+    }));
+
+  if (smsMessages.length === 0) {
+    return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'No valid phone numbers found for SMS notifications.' });
+  }
+
+  console.log('SMS Messages:', smsMessages); // Log the SMS messages to verify the phone_number
+
+  try {
+    const responses = await Promise.all(smsMessages.map(async (sms) => {
+      console.log('Sending SMS to:', sms.to); // Log the phone number being sent
+      const response = await client.messages.create(sms);
+      return response;
+    }));
+
+    console.log('Twilio responses:', responses);
+
+    res.status(STATUS_CODES.CREATED).json({
+      message: MESSAGES.NOTIFICATION_CREATED,
+      responses,
+      users: users.map(user => ({
+        name: `${user.firstname} ${user.lastname}`,
+        phoneNumber: user.phoneNo,
+      })),
+    });
+  } catch (error) {
+    console.error('Error sending SMS notification:', error);
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      message: 'Failed to send SMS notification',
+      error: error.message,
+    });
+  }
+});
+
+
+exports.sendEmailNotification = asyncHandler(async (req, res) => {
+  const { title, message, reportId } = req.body;
+
+  if (!reportId) {
+    throw { statusCode: STATUS_CODES.BAD_REQUEST, message: 'Report ID is required' };
+  }
+
+  const report = await Report.findById(reportId);
+  if (!report || report.status !== 'Confirmed') {
+    throw { statusCode: STATUS_CODES.NOT_FOUND, message: MESSAGES.REPORT_NOT_FOUND };
+  }
+
+  const notificationMessage = `
+    Name: ${report.missingPerson.firstname} ${report.missingPerson.lastname}
+    Age: ${report.missingPerson.age}
+    Last Known Location: ${report.missingPerson.lastKnownLocation}
+    Last Known Clothing: ${report.missingPerson.lastKnownClothing}
+    Last Seen: ${report.missingPerson.lastSeen}
+  `;
+
+  const imageUrl = report.missingPerson.images.length > 0 ? report.missingPerson.images[0].url : null;
+
+  const users = await User.find({
+    preferred_notifications: { $in: ['email'] },
+  });
+
+  if (users.length === 0) {
+    return res.status(STATUS_CODES.NOT_FOUND).json({ message: 'No users found for email notifications.' });
+  }
+
+  const emailMessages = users
+    .filter(user => user.email) 
+    .map(user => ({
+      from: '"Agapay Alert" <no-reply@agapayalert.com>',
+      to: user.email,
+      subject: title,
+      html: notificationEmailTemplate(notificationMessage, imageUrl),
+    }));
+
+  if (emailMessages.length === 0) {
+    return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'No valid email addresses found for email notifications.' });
+  }
+
+  console.log('Email Messages:', emailMessages); 
+  try {
+    const responses = await Promise.all(emailMessages.map(async (email) => {
+      console.log('Sending Email to:', email.to); 
+      const response = await transporter.sendMail(email);
+      return response;
+    }));
+
+    console.log('Mailtrap responses:', responses);
+
+    res.status(STATUS_CODES.CREATED).json({
+      message: MESSAGES.NOTIFICATION_CREATED,
+      responses,
+      users: users.map(user => ({
+        name: `${user.firstname} ${user.lastname}`,
+        email: user.email,
+      })),
+    });
+  } catch (error) {
+    console.error('Error sending email notification:', error);
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      message: 'Failed to send email notification',
+      error: error.message,
+    });
+  }
+});
+
+
+exports.getAllNotifications = asyncHandler(async (req, res) => {
+  const notifications = await Notification.find().sort({ createdAt: -1 });
+  res.status(STATUS_CODES.OK).json(notifications);
 });

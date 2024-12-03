@@ -61,7 +61,9 @@ const PATHS = {
   NOTIFICATION: {
     BASE: "/api/notifications",
     CREATE: { path: "/create", method: METHODS.POST },
-    READ_ALL: { path: "/", method: METHODS.GET },
+    SMS: { path: "/sms", method: METHODS.POST },
+    EMAIL: { path: "/email", method: METHODS.POST },
+    READ_ALL: { path: "/getAll", method: METHODS.GET },
     READ_ONE: { path: "/:id", method: METHODS.GET },
     UPDATE: { path: "/:id", method: METHODS.PUT },
     DELETE: { path: "/:id", method: METHODS.DELETE },

@@ -9,6 +9,21 @@ const notificationRoutes = [
         path: PATHS.NOTIFICATION.CREATE.path,
         handler: notificationController.createNotification,
     },
+    {
+        method: METHODS.GET,
+        path: PATHS.NOTIFICATION.READ_ALL.path,
+        handler: notificationController.getAllNotifications,
+    },
+    {
+        method: METHODS.POST,
+        path: PATHS.NOTIFICATION.SMS.path,
+        handler: notificationController.sendSmsNotification,
+    },
+    {
+        method: METHODS.POST,
+        path: PATHS.NOTIFICATION.EMAIL.path,
+        handler: notificationController.sendEmailNotification,
+    },
 ];
 
 notificationRoutes.forEach(route => {

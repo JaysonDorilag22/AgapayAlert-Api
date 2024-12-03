@@ -3,119 +3,67 @@ const Report = require("../models/reportModel");
 const asyncHandler = require("../utils/asyncHandler");
 const STATUS_CODES = require("../constants/statusCodes");
 const MESSAGES = require("../constants/messages");
-const cloudinary = require("../utils/cloudinary");
-const multer = require("multer");
-const path = require("path");
+const { uploadImages, uploadVideo } = require("../utils/reportUpload");
+const {multipleImagesUpload, videoUpload } = require("../utils/multer");
 const axios = require("axios");
 const createFacebookMessage = require("../views/facebookMessage");
-require("dotenv").config();
-// Set up Cloudinary storage engine
-const storage = multer.diskStorage({
-  destination: "./uploads/",
-  filename: (req, file, cb) => {
-    cb(
-      null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
-    );
-  },
-});
-
-// Initialize upload
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: (req, file, cb) => {
-    checkFileType(file, cb);
-  },
-}).fields([
-  { name: "images", maxCount: 10 },
-  { name: "video", maxCount: 1 },
-]);
-
-// Check file type
-function checkFileType(file, cb) {
-  const imageFiletypes = /jpeg|jpg|png|gif/;
-  const videoFiletypes = /mp4|avi|mkv/;
-  const extname =
-    imageFiletypes.test(path.extname(file.originalname).toLowerCase()) ||
-    videoFiletypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype =
-    imageFiletypes.test(file.mimetype) || videoFiletypes.test(file.mimetype);
-
-  if (mimetype && extname) {
-    return cb(null, true);
-  } else {
-    cb("Error: Images and Videos Only!");
-  }
-}
 
 // Create a new report
-exports.createReport = [
-  (req, res, next) => {
-    upload(req, res, function (err) {
-      if (err instanceof multer.MulterError) {
-        return res
-          .status(STATUS_CODES.BAD_REQUEST)
-          .json({ message: err.message });
-      } else if (err) {
-        return res.status(STATUS_CODES.BAD_REQUEST).json({ message: err });
+exports.createReport = asyncHandler(async (req, res) => {
+  multipleImagesUpload(req, res, async (err) => {
+    if (err) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({ message: err.message });
+    }
+
+    videoUpload(req, res, async (err) => {
+      if (err) {
+        return res.status(STATUS_CODES.BAD_REQUEST).json({ message: err.message });
       }
-      next();
+
+      try {
+        console.log("Body:", req.body); // Log the body of the request
+
+        const { reporter, missingPerson, category } = req.body;
+        const images = req.body.missingPerson.images || [];
+        const video = req.body.missingPerson.video ? req.body.missingPerson.video[0] : null;
+
+        console.log("Reporter:", reporter);
+        console.log("Missing Person:", missingPerson);
+        console.log("Category:", category);
+        console.log(
+          "Images:",
+          images.map((image) => image.url.name)
+        );
+        console.log("Video:", video ? video.url.name : "No video uploaded");
+
+        // Upload images to Cloudinary if present
+        const imageUploadResults = images.length > 0 ? await uploadImages(images) : [];
+        console.log("Image Upload Results:", imageUploadResults);
+
+        // Upload video to Cloudinary if present
+        const videoUploadResult = video ? await uploadVideo(video) : null;
+        console.log("Video Upload Result:", videoUploadResult);
+
+        // Create new report
+        const report = await Report.create({
+          reporter,
+          missingPerson: {
+            ...missingPerson,
+            images: imageUploadResults,
+            video: videoUploadResult,
+          },
+          category,
+        });
+
+        res.status(STATUS_CODES.CREATED).json(report);
+        console.log("Report created:", report);
+      } catch (error) {
+        console.error('Error creating report:', error);
+        res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: 'Failed to create report' });
+      }
     });
-  },
-  asyncHandler(async (req, res) => {
-    console.log("Files:", req.files); // Log the files being uploaded
-    console.log("Body:", req.body); // Log the body of the request
-
-    const { reporter, missingPerson, category } = req.body;
-    const images = req.files.images || [];
-    const video = req.files.video ? req.files.video[0] : null;
-
-    console.log("Reporter:", reporter);
-    console.log("Missing Person:", missingPerson);
-    console.log("Category:", category);
-    console.log(
-      "Images:",
-      images.map((image) => image.originalname)
-    );
-    console.log("Video:", video ? video.originalname : "No video uploaded");
-
-    // Upload images to Cloudinary
-    const imageUploadPromises = images.map((image) =>
-      cloudinary.uploader.upload(image.path, { folder: "report Images" })
-    );
-    const imageUploadResults = await Promise.all(imageUploadPromises);
-
-    // Upload video to Cloudinary
-    const videoUploadResult = video
-      ? await cloudinary.uploader.upload(video.path, {
-          folder: "report Videos",
-          resource_type: "video",
-        })
-      : null;
-
-    // Create new report
-    const report = await Report.create({
-      reporter,
-      missingPerson: {
-        ...missingPerson,
-        images: imageUploadResults.map((result) => ({
-          public_id: result.public_id,
-          url: result.secure_url,
-        })),
-        video: videoUploadResult
-          ? {
-              public_id: videoUploadResult.public_id,
-              url: videoUploadResult.secure_url,
-            }
-          : null,
-      },
-      category,
-    });
-
-    res.status(STATUS_CODES.CREATED).json(report);
-  }),
-];
+  });
+});
 
 // Get a single report by ID
 exports.getReportById = asyncHandler(async (req, res) => {

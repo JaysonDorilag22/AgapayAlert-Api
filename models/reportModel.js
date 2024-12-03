@@ -6,14 +6,14 @@ const reportSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    missingPerson: {
       relationship: 
       { 
         type: String, 
-        enum: ["Parent", "Sibling","Relative", "Friend", "Spouse", "Child", "Colleague", "Other"], 
+        enum: ["Parent", "Sibling","Relative", "Friend", "Spouse", "Child", "Colleague", "Others"], 
         required: true
       },
-    },
-    missingPerson: {
       firstname: { type: String, required: true },
       lastname: { type: String, required: true },
       dateOfBirth: { type: Date, required: true },
@@ -38,8 +38,8 @@ const reportSchema = new mongoose.Schema(
       reward: { type: Number },
       images: [
         {
-          public_id: { type: String, default: "", required: true }, 
-          url: { type: String, default: "", required: true }, 
+          public_id: { type: String, default: "" }, 
+          url: { type: String, default: "" }, 
         },
       ],
       video: {

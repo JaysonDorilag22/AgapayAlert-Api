@@ -18,13 +18,6 @@ const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
 const INFOBIP_BASE_URL = process.env.INFOBIP_BASE_URL;
 
-
-console.log('OneSignal App ID:', ONESIGNAL_APP_ID);
-console.log('OneSignal API Key:', ONESIGNAL_API_KEY);
-
-console.log('infoBip API Key:', INFOBIP_API_KEY);
-console.log('infoBip Base URL:', INFOBIP_BASE_URL);
-
 const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
 

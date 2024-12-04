@@ -3,7 +3,13 @@ const router = express.Router();
 const { PATHS, METHODS } = require('../constants/path');
 const feedbackController = require('../controllers/feedbackController');
 
+// Define non-dynamic routes first to prevent conflicts
 const feedbackRoutes = [
+    {
+        method: METHODS.GET,
+        path: PATHS.FEEDBACK.READ_RATINGS.path, // Overall ratings path
+        handler: feedbackController.getOverallRatings,
+    },
     {
         method: METHODS.POST,
         path: PATHS.FEEDBACK.CREATE.path,
@@ -16,8 +22,13 @@ const feedbackRoutes = [
     },
     {
         method: METHODS.GET,
-        path: PATHS.FEEDBACK.READ_ONE.path,
+        path: PATHS.FEEDBACK.READ_ONE.path, // Dynamic :id
         handler: feedbackController.getFeedback,
+    },
+    {
+        method: METHODS.GET,
+        path: PATHS.FEEDBACK.USER_FEEDBACKS.path,
+        handler: feedbackController.getUserFeedbacks,
     },
     {
         method: METHODS.PUT,
@@ -31,6 +42,7 @@ const feedbackRoutes = [
     },
 ];
 
+// Dynamically bind routes to the router
 feedbackRoutes.forEach(route => {
     router[route.method.toLowerCase()](route.path, route.handler);
 });

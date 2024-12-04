@@ -36,12 +36,14 @@ const PATHS = {
   // Feedback paths
   FEEDBACK: {
     BASE: "/api/feedbacks",
-    CREATE: { path: "/", method: METHODS.POST },
+    CREATE: { path: "/create", method: METHODS.POST },
     READ_ALL: { path: "/", method: METHODS.GET },
     READ_ONE: { path: "/:id", method: METHODS.GET },
+    READ_RATINGS: { path: "/overall-ratings", method: METHODS.GET },
+    USER_FEEDBACKS: { path: "/user/:userId", method: METHODS.GET },
     UPDATE: { path: "/:id", method: METHODS.PUT },
-    DELETE: { path: "/:id", method: METHODS.DELETE },
-  },
+    DELETE: { path: "/delete/:id", method: METHODS.DELETE },
+},
 
   // Report paths
   REPORT: {

@@ -86,8 +86,7 @@ exports.getAllReports = asyncHandler(async (req, res) => {
 });
 
 // Update a report by ID
-exports.updateReportById = [
-  (req, res, next) => {
+exports.updateReportById = [ (req, res, next) => {
     upload(req, res, function (err) {
       if (err instanceof multer.MulterError) {
         return res
@@ -179,7 +178,7 @@ exports.deleteReportById = asyncHandler(async (req, res) => {
 });
 
 
-
+// post to facebook 
 exports.postReportToFacebook = asyncHandler(async (req, res) => {
   const pageAccessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
   const pageId = process.env.FACEBOOK_PAGE_ID;

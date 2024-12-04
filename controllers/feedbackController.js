@@ -17,8 +17,8 @@ exports.addFeedback = asyncHandler(async (req, res) => {
         ratings,
     });
 
-    const createdFeedback = await feedback.save();
-    successHandler(res, STATUS_CODES.CREATED, MESSAGES.FEEDBACK_ADDED, createdFeedback);
+    await feedback.save();
+    successHandler(res, STATUS_CODES.CREATED, MESSAGES.FEEDBACK_ADDED);
 });
 
 exports.getFeedback = asyncHandler(async (req, res) => {
@@ -120,4 +120,24 @@ exports.getOverallRatings = asyncHandler(async (req, res) => {
     }
 
     successHandler(res, STATUS_CODES.OK, MESSAGES.OVERALL_RATINGS_FETCHED, overallRatings[0]);
+});
+
+
+exports.getUserFeedbacks = asyncHandler(async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        console.log(`Fetching feedbacks for user ID: ${userId}`);
+
+        const feedbacks = await Feedback.find({ userId });
+
+        if (!feedbacks || feedbacks.length === 0) {
+            return res.status(STATUS_CODES.NOT_FOUND).json({ message: `No feedbacks found for user ID: ${userId}` });
+        }
+
+        successHandler(res, STATUS_CODES.OK, MESSAGES.FEEDBACKS_FETCHED, feedbacks);
+    } catch (error) {
+        console.error(`Error fetching feedbacks for user ID: ${userId}`, error);
+        res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: error.message });
+    }
 });

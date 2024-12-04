@@ -10,6 +10,7 @@ const feedbackRoutes = require('./routes/feedbackRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const alprRoutes = require('./routes/alprRoutes');
+const sightingRoutes = require('./routes/sightingRoutes');
 const { PATHS } = require('./constants/path');
 const errorMiddleware = require('./utils/errorMiddleware');
 const { pipeline } = require('nodemailer/lib/xoauth2');
@@ -33,6 +34,7 @@ app.use(PATHS.FEEDBACK.BASE, feedbackRoutes);
 app.use(PATHS.REPORT.BASE, reportRoutes);
 app.use(PATHS.NOTIFICATION.BASE, notificationRoutes);
 app.use(PATHS.ALPR.BASE, alprRoutes);
+app.use(PATHS.SIGHTING.BASE, sightingRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

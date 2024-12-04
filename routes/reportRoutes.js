@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { PATHS, METHODS } = require('../constants/path');
 const reportController = require('../controllers/reportController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const reportRoutes = [
     {
@@ -39,6 +40,11 @@ const reportRoutes = [
         path: PATHS.REPORT.DELETE_POST.path,
         handler: reportController.deleteReportFromFacebook,
     },
+    {
+        method: METHODS.GET,
+        path: PATHS.REPORT.READ_BY_USER.path,
+        handler: [authMiddleware, reportController.getReportsByCurrentUser],
+      },
     {
         method: METHODS.PUT,
         path: PATHS.REPORT.UPDATE_STATUS.path,

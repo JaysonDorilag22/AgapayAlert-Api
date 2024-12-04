@@ -55,6 +55,7 @@ const PATHS = {
     DELETE: { path: "/:id", method: METHODS.DELETE },
     POST_REPORT: { path: "/:id", method: METHODS.POST },
     DELETE_POST: { path: "/:id", method: METHODS.DELETE },
+    UPDATE_STATUS: { path: "/status/:id", method: METHODS.PUT },
 
 
   },

@@ -53,7 +53,7 @@ const reportSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["Pending", "Confirmed", "Solved"],
-      default: "Confirmed",
+      default: "Pending",
       required: true,
     },
     category: {

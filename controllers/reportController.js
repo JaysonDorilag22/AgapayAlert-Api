@@ -266,3 +266,41 @@ exports.postReportToFacebook = (req, res) => {
 exports.deleteReportFromFacebook = (req, res) => {
   res.status(STATUS_CODES.NOT_IMPLEMENTED).json({ message: 'Not implemented' });
 };
+
+
+
+
+exports.updateReportStatus = asyncHandler(async (req, res, next) => {
+  try {
+    const { id: reportId } = req.params;
+    const { status } = req.body;
+
+    if (!reportId) {
+      return next({ statusCode: STATUS_CODES.BAD_REQUEST, message: 'Report ID is required' });
+    }
+
+    const validStatuses = ["Pending", "Confirmed", "Solved"];
+    if (!validStatuses.includes(status)) {
+      return next({ statusCode: STATUS_CODES.BAD_REQUEST, message: 'Invalid status value' });
+    }
+
+    const report = await Report.findByIdAndUpdate(
+      reportId,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!report) {
+      return next({ statusCode: STATUS_CODES.NOT_FOUND, message: 'Report not found' });
+    }
+
+    res.status(STATUS_CODES.OK).json({
+      status: 'success',
+      data: {
+        report,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});

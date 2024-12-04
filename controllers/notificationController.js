@@ -18,6 +18,13 @@ const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
 const INFOBIP_BASE_URL = process.env.INFOBIP_BASE_URL;
 
+
+console.log('OneSignal App ID:', ONESIGNAL_APP_ID);
+console.log('OneSignal API Key:', ONESIGNAL_API_KEY);
+
+console.log('infoBip API Key:', INFOBIP_API_KEY);
+console.log('infoBip Base URL:', INFOBIP_BASE_URL);
+
 const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
 
@@ -64,19 +71,19 @@ exports.createNotification = asyncHandler(async (req, res) => {
     tier: tier || 'high',
     confirmation: confirmation || 'verified',
     description: notificationMessage,
-    images: report.missingPerson.images,
+    images: report.images,
   });
 
   await notification.save();
 
-  const imageUrl = report.missingPerson.images.length > 0 ? report.missingPerson.images[0].url : null;
+  const imageUrl = report.images && report.images.length > 0 ? report.images[0].url : null;
 
   const oneSignalNotification = {
     app_id: ONESIGNAL_APP_ID,
     included_segments: ["All"],
     headings: { en: title },
     contents: { en: notificationMessage },
-    data: { reportId: report._id, images: report.missingPerson.images },
+    data: { reportId: report._id, images: report.images },
     big_picture: imageUrl, // For Android
     ios_attachments: { id1: imageUrl }, // For iOS
   };
@@ -276,7 +283,7 @@ exports.sendEmailNotification = asyncHandler(async (req, res) => {
     Last Seen: ${report.missingPerson.lastSeen}
   `;
 
-  const imageUrl = report.missingPerson.images.length > 0 ? report.missingPerson.images[0].url : null;
+  const imageUrl = report.images && report.images.length > 0 ? report.images[0].url : null;
 
   const users = await User.find({
     preferred_notifications: { $in: ['email'] },
@@ -287,7 +294,7 @@ exports.sendEmailNotification = asyncHandler(async (req, res) => {
   }
 
   const emailMessages = users
-    .filter(user => user.email) 
+    .filter(user => user.email)
     .map(user => ({
       from: '"Agapay Alert" <no-reply@agapayalert.com>',
       to: user.email,
@@ -299,10 +306,10 @@ exports.sendEmailNotification = asyncHandler(async (req, res) => {
     return res.status(STATUS_CODES.BAD_REQUEST).json({ message: 'No valid email addresses found for email notifications.' });
   }
 
-  console.log('Email Messages:', emailMessages); 
+  console.log('Email Messages:', emailMessages);
   try {
     const responses = await Promise.all(emailMessages.map(async (email) => {
-      console.log('Sending Email to:', email.to); 
+      console.log('Sending Email to:', email.to);
       const response = await transporter.sendMail(email);
       return response;
     }));

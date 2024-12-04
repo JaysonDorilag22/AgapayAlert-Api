@@ -1,74 +1,57 @@
-const cloudinary = require('./cloudinary');
-const fs = require('fs');
+const multer = require('multer');
+const path = require('path');
 
-async function uploadImages(images) {
-  if (!images || images.length === 0) return [];
+// Set storage engine to disk storage
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, './uploads/');
+  },
+  filename: function(req, file, cb) {
+    cb(null, new Date().toISOString().replace(/:/g, '-') + '-' + file.originalname);
+  }
+});
 
-  try {
-    const uploadPromises = images.map(image =>
-      new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream({ folder: "report Images" }, (error, result) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve({
-              public_id: result.public_id,
-              url: result.secure_url,
-            });
-          }
-        });
+// Check file type
+function checkFileType(file, cb, filetypes) {
+  const extname = filetypes.test(file.originalname.toLowerCase());
+  const mimetype = filetypes.test(file.mimetype);
 
-        const filePath = image.url.uri.replace('file://', '');
-        fs.readFile(filePath, (err, data) => {
-          if (err) {
-            reject(err);
-          } else {
-            uploadStream.end(data);
-          }
-        });
-      })
-    );
-
-    const uploadResponses = await Promise.all(uploadPromises);
-
-    return uploadResponses;
-  } catch (error) {
-    console.error('Error uploading images:', error);
-    throw new Error('Failed to upload images');
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb('Error: Invalid file type!');
   }
 }
 
-async function uploadVideo(video) {
-  if (!video) return {};
-
-  try {
-    const uploadResponse = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream({ folder: "report Videos", resource_type: "video" }, (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve({
-            public_id: result.public_id,
-            url: result.secure_url,
-          });
-        }
-      });
-
-      const filePath = video.url.uri.replace('file://', '');
-      fs.readFile(filePath, (err, data) => {
-        if (err) {
-          reject(err);
-        } else {
-          uploadStream.end(data);
-        }
-      });
-    });
-
-    return uploadResponse;
-  } catch (error) {
-    console.error('Error uploading video:', error);
-    throw new Error('Failed to upload video');
+// Single file upload (e.g., avatar)
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    checkFileType(file, cb, /jpeg|jpg|png|gif/);
   }
-}
+}).single('avatar'); // 'avatar' is the field name for the file
 
-module.exports = { uploadImages, uploadVideo };
+// Multiple images upload
+const multipleImagesUpload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit per file
+  fileFilter: (req, file, cb) => {
+    checkFileType(file, cb, /jpeg|jpg|png|gif/);
+  }
+}).array('images', 10); // 'images' is the field name for the files, max 10 files
+
+// Video upload
+const videoUpload = multer({
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  fileFilter: (req, file, cb) => {
+    checkFileType(file, cb, /mp4|mov|avi|mkv/);
+  }
+}).single('video'); // 'video' is the field name for the file
+
+module.exports = {
+  upload,
+  multipleImagesUpload,
+  videoUpload
+};

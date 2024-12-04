@@ -1,7 +1,7 @@
 const User = require('../models/userModel');
 const STATUS_CODES = require('../constants/statusCodes');
 const MESSAGES = require('../constants/messages'); 
-const upload = require('../utils/multer');
+const {upload} = require('../utils/multer');
 const asyncHandler = require('../utils/asyncHandler');
 const { successHandler } = require("../utils/successHandler");
 const {uploadAvatar} = require('../utils/avatarUpload');

@@ -8,8 +8,7 @@ const reportSchema = new mongoose.Schema(
       required: true,
     },
     missingPerson: {
-      relationship: 
-      { 
+      relationship: { 
         type: String, 
         enum: ["Parent", "Sibling","Relative", "Friend", "Spouse", "Child", "Colleague", "Others"], 
         required: true
@@ -19,13 +18,13 @@ const reportSchema = new mongoose.Schema(
       dateOfBirth: { type: Date, required: true },
       age: { type: Number, required: true },
       assignedSexAtBirth: { type: String, enum: ["Male", "Female"], required: true },
-      scarsOrMarks: { type: String},
+      scarsOrMarks: { type: String },
       prostheticsOrImplants: { type: String },
       lastKnownClothing: { type: String },
       lastKnownLocation: { type: String, required: true },
       lastSeen: { type: Date, required: true },
       causeOfDisappearance: { type: String, required: true },
-      currentHairColor: { type: String},
+      currentHairColor: { type: String },
       dyedHairColor: { type: Boolean, default: false },
       alias: { type: String },
       genderIdentity: { type: String },
@@ -36,25 +35,25 @@ const reportSchema = new mongoose.Schema(
       wearsContactLenses: { type: Boolean, default: false },
       bloodType: { type: String },
       reward: { type: Number },
-      images: [
-        {
-          public_id: { type: String, default: "" }, 
-          url: { type: String, default: "" }, 
-        },
-      ],
-      video: {
-        public_id: { type: String, default: "" },
-        url: { type: String, default: "" },
-      },
       medication: { type: String },
       birthDefects: { type: String },
       contactNumber: { type: String },
       socialMediaAccount: { type: String },
     },
+    images: [
+      {
+        public_id: { type: String, default: "" }, 
+        url: { type: String, default: "" }, 
+      },
+    ],
+    video: {
+      public_id: { type: String, default: "" },
+      url: { type: String, default: "" },
+    },
     status: {
       type: String,
       enum: ["Pending", "Confirmed", "Solved"],
-      default: "Pending",
+      default: "Confirmed",
       required: true,
     },
     category: {

@@ -20,6 +20,12 @@ const notificationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  images: [
+    {
+      public_id: { type: String, default: "", required: true },
+      url: { type: String, default: "", required: true },
+    },
+  ],
 }, {
   timestamps: true,
 });

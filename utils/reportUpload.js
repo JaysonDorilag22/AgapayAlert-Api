@@ -39,7 +39,7 @@ const multipleImagesUpload = multer({
   fileFilter: (req, file, cb) => {
     checkFileType(file, cb, /jpeg|jpg|png|gif/);
   }
-}).array('missingPerson.images', 10); // 'missingPerson.images' is the field name for the files, max 10 files
+}).array('images', 10); // 'images' is the field name for the files, max 10 files
 
 // Video upload
 const videoUpload = multer({
@@ -48,7 +48,7 @@ const videoUpload = multer({
   fileFilter: (req, file, cb) => {
     checkFileType(file, cb, /mp4|mov|avi|mkv/);
   }
-}).single('missingPerson.video'); // 'missingPerson.video' is the field name for the file
+}).single('video'); // 'video' is the field name for the file
 
 module.exports = {
   upload,

@@ -12,15 +12,15 @@ const sightingSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    name: {
-      type: String,
-      required: true,
-    },
-    fullName: {
-      type: String,
-      required: true,
-    },
     locationSeen: {
+      type: String,
+      required: true,
+    },
+    dateSeen: {
+      type: Date,
+      required: true,
+    },
+    description: {
       type: String,
       required: true,
     },
@@ -31,16 +31,16 @@ const sightingSchema = new mongoose.Schema(
         required: true,
       },
       image: {
-        public_id: { type: String, default: "", required: true },
-        url: { type: String, default: "", required: true },
+        public_id: { type: String, default: ""},
+        url: { type: String, default: ""},
       },
     },
-    images: [
-      {
-        public_id: { type: String, default: "", required: true },
-        url: { type: String, default: "", required: true },
-      },
-    ],
+    status: {
+      type: String,
+      enum: ["Pending", "In Process", "Resolved"],
+      default: "Pending",
+      required: true,
+    },
     createdAt: { type: Date, default: Date.now },
   },
   {

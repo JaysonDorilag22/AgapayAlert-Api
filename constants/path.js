@@ -50,13 +50,13 @@ const PATHS = {
     BASE: "/api/reports",
     CREATE: { path: "/create", method: METHODS.POST },
     READ_ALL: { path: "/getall", method: METHODS.GET },
-    READ_ONE: { path: "/:id", method: METHODS.GET },
+    READ_ONE: { path: "/getone/:id", method: METHODS.GET },
     UPDATE: { path: "/:id", method: METHODS.PUT },
     DELETE: { path: "/:id", method: METHODS.DELETE },
     POST_REPORT: { path: "/:id", method: METHODS.POST },
     DELETE_POST: { path: "/:id", method: METHODS.DELETE },
     UPDATE_STATUS: { path: "/status/:id", method: METHODS.PUT },
-
+    READ_BY_USER: { path: '/byuser', method: METHODS.GET },
 
   },
 
@@ -109,6 +109,17 @@ const PATHS = {
     READ_ONE: { path: "/:id", method: METHODS.GET },
     UPDATE: { path: "/:id", method: METHODS.PUT },
     DELETE: { path: "/:id", method: METHODS.DELETE },
+  },
+
+  // Sighting paths
+  SIGHTING: {
+    BASE: "/api/sightings",
+    CREATE: { path: "/create", method: METHODS.POST },
+    READ_ALL: { path: "/getall", method: METHODS.GET },
+    READ_ONE: { path: "/getone/:id", method: METHODS.GET },
+    UPDATE: { path: "/update/:id", method: METHODS.PUT },
+    DELETE: { path: "/delete/:id", method: METHODS.DELETE },
+    READ_BY_USER: { path: '/byuser', method: METHODS.GET },
   },
 
 };

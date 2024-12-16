@@ -137,6 +137,17 @@ exports.createReport = asyncHandler(async (req, res) => {
   });
 });
 
+// Get all reports by the current user
+exports.getReportsByCurrentUser = async (req, res) => {
+  try {
+    const userId = req.user._id; // Assuming req.user contains the authenticated user's information
+    const reports = await Report.find({ reporter: userId }).populate("reporter");
+    res.status(STATUS_CODES.OK).json(reports);
+  } catch (error) {
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({ message: error.message });
+  }
+};
+
 // Get a single report by ID
 exports.getReportById = asyncHandler(async (req, res) => {
   const report = await Report.findById(req.params.id);

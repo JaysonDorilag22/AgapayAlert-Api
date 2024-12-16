@@ -7,7 +7,7 @@ const { successHandler } = require("../utils/successHandler");
 const {uploadAvatar} = require('../utils/avatarUpload');
 const cloudinary = require('../utils/cloudinary');
 const paginate = require('../utils/pagination');
-
+const updateUserFields = require('../helpers/userHelper')
 
 // Display users function
 exports.displayUsers = asyncHandler(async (req, res) => {
@@ -15,9 +15,7 @@ exports.displayUsers = asyncHandler(async (req, res) => {
   const pageSize = parseInt(req.query.pageSize, 10) || 10;
   const sort = req.query.sort ? JSON.parse(req.query.sort) : {};
   const filter = req.query.filter ? JSON.parse(req.query.filter) : {};
-
   const paginationResult = await paginate(User, filter, page, pageSize, 'firstname lastname email verified', sort);
-
   successHandler(res, STATUS_CODES.OK, 'Users retrieved successfully', {
     page: paginationResult.page,
     pageSize: paginationResult.pageSize,
@@ -46,11 +44,9 @@ exports.editUserInfo = asyncHandler(async (req, res, next) => {
       console.log('Upload Error:', err);
       return next({ statusCode: STATUS_CODES.BAD_REQUEST, message: err.message });
     }
-
     try {
       const { id: userId } = req.params;
       if (!userId) return next({ statusCode: STATUS_CODES.BAD_REQUEST, message: MESSAGES.USER_ID_REQUIRED });
-
       const { firstname, lastname, email, address, phoneNo, preferred_notifications } = req.body;
 
       const validNotifications = ['sms', 'push', 'email'];
@@ -80,18 +76,7 @@ exports.editUserInfo = asyncHandler(async (req, res, next) => {
         };
       }
 
-      if (firstname !== undefined) user.firstname = firstname;
-      if (lastname !== undefined) user.lastname = lastname;
-      if (email !== undefined) user.email = email;
-      if (address) {
-        if (address.street !== undefined) user.address.street = address.street;
-        if (address.city !== undefined) user.address.city = address.city;
-        if (address.state !== undefined) user.address.state = address.state;
-        if (address.zipCode !== undefined) user.address.zipCode = address.zipCode;
-        if (address.country !== undefined) user.address.country = address.country;
-      }
-      if (phoneNo !== undefined) user.phoneNo = phoneNo;
-      if (preferred_notifications !== undefined) user.preferred_notifications = preferred_notifications;
+      updateUserFields(user, { firstname, lastname, email, address, phoneNo, preferred_notifications });
 
       await user.save();
       successHandler(res, STATUS_CODES.OK, 'User information updated successfully', { user });

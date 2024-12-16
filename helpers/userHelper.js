@@ -54,30 +54,23 @@ const handleExistingUser = async (res, existingUser) => {
   return res.status(STATUS_CODES.CONFLICT).json({ message: MESSAGES.USER_ALREADY_EXISTS });
 };
 
+const updateUserFields = (user, fields) => {
+  const { firstname, lastname, email, address, phoneNo, preferred_notifications } = fields;
 
-//create new User
-const createUser = async (req, res, userData) => {
-  const avatarData = await uploadAvatar(req.file);
-  const hashedPassword = await bcrypt.hash(userData.password, 10);
-  const { verificationCode, verificationExpires } = generateVerificationCode();
-
-  const user = new User({
-    ...userData,
-    password: hashedPassword,
-    avatar: avatarData,
-    verification: {
-      code: verificationCode,
-      expiresAt: verificationExpires,
-      lastRequestedAt: Date.now(),
-    },
-  });
-
-  await user.save();
-  await sendVerificationEmail(user.email, verificationCode);
-
-  return res.status(STATUS_CODES.CREATED).json({ message: MESSAGES.VERIFICATION_CODE_SENT });
+  if (firstname !== undefined) user.firstname = firstname;
+  if (lastname !== undefined) user.lastname = lastname;
+  if (email !== undefined) user.email = email;
+  if (address) {
+    const { street, city, state, zipCode, country } = address;
+    if (street !== undefined) user.address.street = street;
+    if (city !== undefined) user.address.city = city;
+    if (state !== undefined) user.address.state = state;
+    if (zipCode !== undefined) user.address.zipCode = zipCode;
+    if (country !== undefined) user.address.country = country;
+  }
+  if (phoneNo !== undefined) user.phoneNo = phoneNo;
+  if (preferred_notifications !== undefined) user.preferred_notifications = preferred_notifications;
 };
-
 
 
 module.exports = {
@@ -86,5 +79,5 @@ module.exports = {
   resetUserPassword,
   validateRequestBody,
   handleExistingUser,
-  createUser,
+  updateUserFields,
 };

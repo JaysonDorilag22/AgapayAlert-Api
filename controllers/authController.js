@@ -8,7 +8,6 @@ const { successHandler } = require("../utils/successHandler");
 const { sendPasswordResetEmail } = require("../utils/sendEmail");
 const { createToken, setTokenCookie } = require("../utils/token");
 const {
-  handleVerification,
   generateVerificationCode,
 } = require("../utils/verification");
 const { validateResetPasswordInput } = require("../helpers/validationHelper");
@@ -19,7 +18,6 @@ const {
   resetUserPassword,
   validateRequestBody,
   handleExistingUser,
-  createUser,
 } = require("../helpers/userHelper");
 const { uploadAvatar } = require("../utils/avatarUpload");
 
@@ -174,24 +172,21 @@ exports.resendVerificationCode = asyncHandler(async (req, res) => {
       message: MESSAGES.EMAIL_ALREADY_VERIFIED,
     };
 
-  // Check if the last request was made within the cooldown period (e.g., 5 minutes)
-  const cooldownPeriod = 60 * 1000; // 5 minutes in milliseconds
+  const cooldownPeriod = 60 * 1000;
   if (Date.now() - user.verification.lastRequestedAt < cooldownPeriod)
     throw {
       statusCode: STATUS_CODES.TOO_MANY_REQUESTS,
       message: MESSAGES.TOO_MANY_REQUESTS,
     };
 
-  // Generate new 4-digit verification code
   const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
-  const verificationExpires = Date.now() + 3600000; // 1 hour
+  const verificationExpires = Date.now() + 3600000;
 
   user.verification.code = verificationCode;
   user.verification.expiresAt = verificationExpires;
   user.verification.lastRequestedAt = Date.now();
   await user.save();
 
-  // Send verification email
   await sendVerificationEmail(user.email, verificationCode);
 
   res
